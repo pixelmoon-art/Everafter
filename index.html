@@ -15,10 +15,10 @@
      name should appear. Do not type a backtick ( ` ) inside the text.
    - Online storage (optional): fill ONE of the two groups, or neither.
    ================================================================== */
-const SB_URL = '';     
-const SB_KEY = '';      
-const AW_PROJECT = '6ae1dbae00082ac167b5';  
-const AW_ENDPOINT = 'https://sgp.cloud.appwrite.io/v1'; 
+const SB_URL = '';        // Supabase: 'https://xxxx.supabase.co'
+const SB_KEY = '';        // Supabase: the anon public key
+const AW_PROJECT = '6ae1dbae00082ac167b5';    // Appwrite Project ID
+const AW_ENDPOINT = 'https://sgp.cloud.appwrite.io/v1';
 
 const SITE = {
  a:'Alex',b:'Sam',
@@ -374,7 +374,7 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
     <div class="field" style="margin-top:12px"><label for="lnkFull">Full link</label><div class="lrow"><input id="lnkFull" type="text" readonly><button class="btn sm" id="cpFull">Copy</button></div></div>
     <div class="field"><label for="lnkShort">Short link</label><div class="lrow"><input id="lnkShort" type="text" readonly placeholder="Tap Make short link"><button class="btn sm" id="cpShort">Copy</button></div></div>
     <div class="row"><button class="btn" id="mkShort">Make short link</button></div>
-    <p class="hint" style="margin-top:8px">Short links are stored in your Supabase project, so connect it first (see the last page).</p>
+    <p class="hint" style="margin-top:8px">Short links are stored in your online database, so connect it first (see the last page).</p>
   </div>
 </div></section>
 
@@ -395,7 +395,7 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
     <div class="field"><label for="sbKey">Anon public key</label><input id="sbKey" type="text" autocomplete="off"></div>
     <p class="lab" style="margin:6px 0 8px">Appwrite</p>
     <div class="field"><label for="awProj">Project ID</label><input id="awProj" type="text" autocomplete="off"></div>
-    <div class="field"><label for="awEp">API endpoint</label><input id="awEp" type="url" placeholder="https://cloud.appwrite.io/v1" autocomplete="off"></div>
+    <div class="field"><label for="awEp">API endpoint</label><input id="awEp" type="url" placeholder="https://sgp.cloud.appwrite.io/v1" autocomplete="off"></div>
     <div class="row"><button class="btn" id="sbSave">Connect</button><button class="btn ghost" id="sbCopy">Copy lines for index.html</button></div>
     <p class="hint" style="margin-top:8px">So visitors on other phones are connected too, paste the copied lines near the top of index.html, replacing the matching lines there.</p></div>
 </div></section>
@@ -415,49 +415,37 @@ const copy=(txt,inp)=>{const fb=()=>{try{inp&&(inp.focus(),inp.select());documen
 function burst(x,y,n=20){const cols=['#d4607b','#8b2a48','#f0a3b3','#b98a5c','#e8788f'];for(let i=0;i<n;i++){const h=document.createElement('i');h.className='burst';const a=Math.random()*6.283,d=60+Math.random()*170;h.style.cssText=`left:${x-11}px;top:${y-11}px;background:${cols[i%5]};--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d-40}px;--r:${Math.random()*120-60}deg`;document.body.appendChild(h);setTimeout(()=>h.remove(),1700)}}
 const fmtT=t=>{t=Math.floor(t||0);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 
-/* ---------- Supabase over plain REST ---------- */
+/* ---------- Supabase REST + Appwrite TablesDB ---------- */
+const DBID='6ae1e2c30016f213ebfe';
+const T={Anniversary:'6ae1e326003c5dff2f26',short_links:'6ae20a13001d0280ad73',Settings:'6ae20cff002f16ddb1c2',Media:'6ae20d6c000a1d6b9cb7',wishes:'6ae20dcb0028773ccdd1'};
+let giftId=new URLSearchParams(location.search).get('g')||LS.get('draftGiftId','');
+if(!giftId){giftId=Array.from({length:7},()=>{const a='abcdefghjkmnpqrstuvwxyz23456789';return a[Math.floor(Math.random()*a.length)]}).join('');LS.set('draftGiftId',giftId)}
 const sb={
  cfg(){const l=LS.get('sb',{});return{url:(SB_URL||l.url||'').replace(/\/+$/,''),key:SB_KEY||l.key||'',aw:AW_PROJECT||l.aw||'',ep:(AW_ENDPOINT||l.ep||'https://cloud.appwrite.io/v1').replace(/\/+$/,'')}},
- get type(){const c=this.cfg();return c.aw?'aw':(c.url&&c.key?'sb':'')},
- get on(){return !!this.type},
- /* Supabase REST */
+ get type(){const c=this.cfg();return c.aw?'aw':(c.url&&c.key?'sb':'')},get on(){return !!this.type},
  async req(p,o={}){const c=this.cfg();const r=await fetch(c.url+p,{...o,headers:{apikey:c.key,Authorization:'Bearer '+c.key,...(o.headers||{})}});if(!r.ok)throw new Error((await r.text())||r.status);const t=await r.text();return t?JSON.parse(t):null},
- rest(p,o){return this.req('/rest/v1/'+p,o)},
- json(p,method,body,prefer='return=representation'){return this.rest(p,{method,headers:{'Content-Type':'application/json',Prefer:prefer},body:JSON.stringify(body)})},
+ rest(p,o){return this.req('/rest/v1/'+p,o)},json(p,method,body,prefer='return=representation'){return this.rest(p,{method,headers:{'Content-Type':'application/json',Prefer:prefer},body:JSON.stringify(body)})},
  pub:path=>sb.cfg().url+'/storage/v1/object/public/anniversary/'+path,
- /* Appwrite REST */
  async aw(p,o={}){const c=this.cfg();const r=await fetch(c.ep+p,{...o,headers:{'X-Appwrite-Project':c.aw,...(o.headers||{})}});if(!r.ok)throw new Error((await r.text())||r.status);const t=await r.text();return t?JSON.parse(t):null},
  awj(p,method,body){return this.aw(p,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})},
- awd:col=>'/databases/anniversary/collections/'+col+'/documents',
+ awd:table=>`/tablesdb/${DBID}/tables/${T[table]}/rows`,
  awq:(...qs)=>'?'+qs.map(q=>'queries[]='+encodeURIComponent(JSON.stringify(q))).join('&'),
  awurl(id){const c=this.cfg();return c.ep+'/storage/buckets/anniversary/files/'+id+'/view?project='+c.aw},
- /* one API for the site */
- ping(){return this.type==='aw'?this.aw(this.awd('settings')+this.awq({method:'limit',values:[1]})):this.rest('site_settings?select=id&limit=1')},
- async listMedia(kind){
-  if(this.type==='aw'){const r=await this.aw(this.awd('media')+this.awq({method:'equal',attribute:'kind',values:[kind]},{method:'orderDesc',attribute:'$createdAt'},{method:'limit',values:[100]}));return r.documents.map(m=>({id:m.$id,name:m.name,src:this.awurl(m.path),path:m.path}))}
-  const r=await this.rest('media?kind=eq.'+kind+'&select=*&order=created_at.desc');return r.map(m=>({id:m.id,name:m.name,src:this.pub(m.path),path:m.path}))},
- async addMedia(kind,name,blob,ext){
-  if(this.type==='aw'){const fd=new FormData();fd.append('fileId','unique()');fd.append('file',blob,'f.'+ext);const f=await this.aw('/storage/buckets/anniversary/files',{method:'POST',body:fd});
-   await this.awj(this.awd('media'),'POST',{documentId:'unique()',data:{kind,name,path:f.$id}});return}
-  const path=kind+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
-  await this.req('/storage/v1/object/anniversary/'+path,{method:'POST',headers:{'Content-Type':blob.type||'application/octet-stream'},body:blob});await this.json('media','POST',{kind,name,path})},
- async delMedia(m){
-  if(this.type==='aw'){await this.aw(this.awd('media')+'/'+m.id,{method:'DELETE'});try{await this.aw('/storage/buckets/anniversary/files/'+m.path,{method:'DELETE'})}catch(e){}return}
-  await this.rest('media?id=eq.'+m.id,{method:'DELETE'});try{await this.req('/storage/v1/object/anniversary/'+m.path,{method:'DELETE'})}catch(e){}},
- async listWishes(){
-  if(this.type==='aw'){const r=await this.aw(this.awd('wishes')+this.awq({method:'orderDesc',attribute:'$createdAt'},{method:'limit',values:[60]}));return r.documents.map(w=>({name:w.name,message:w.message,created_at:w.$createdAt}))}
-  return this.rest('wishes?select=*&order=created_at.desc&limit=60')},
- addWish(name,message){return this.type==='aw'?this.awj(this.awd('wishes'),'POST',{documentId:'unique()',data:{name:name||'',message}}):this.json('wishes','POST',{name:name||null,message},'return=minimal')},
- async getSettings(){
-  if(this.type==='aw'){try{const d=await this.aw(this.awd('settings')+'/main');return JSON.parse(d.data)}catch(e){return null}}
-  const r=await this.rest('site_settings?id=eq.1&select=data');return r&&r[0]&&r[0].data},
- async saveSettings(o){
-  if(this.type==='aw'){const s=JSON.stringify(o);try{await this.awj(this.awd('settings')+'/main','PATCH',{data:{data:s}})}catch(e){await this.awj(this.awd('settings'),'POST',{documentId:'main',data:{data:s}})}return}
-  await this.json('site_settings','POST',{id:1,data:o,updated_at:new Date().toISOString()},'resolution=merge-duplicates,return=minimal')},
- makeShort(code,url){return this.type==='aw'?this.awj(this.awd('short_links'),'POST',{documentId:code,data:{url}}):this.json('short_links','POST',{code,url},'return=minimal')},
- async resolveShort(code){
-  if(this.type==='aw'){const d=await this.aw(this.awd('short_links')+'/'+encodeURIComponent(code));return d&&d.url}
-  const r=await this.rest('short_links?code=eq.'+encodeURIComponent(code)+'&select=url');return r&&r[0]&&r[0].url}};
+ async ping(){if(this.type==='aw')return this.aw(this.awd('Settings')+this.awq({method:'limit',values:[1]}));return this.rest('site_settings?select=id&limit=1')},
+ async getRow(table,id){return this.aw(this.awd(table)+'/'+encodeURIComponent(id))},
+ async putRow(table,id,data){try{return await this.awj(this.awd(table)+'/'+encodeURIComponent(id),'PATCH',{data})}catch(e){return this.awj(this.awd(table),'POST',{rowId:id,data})}},
+ async getGift(id){if(this.type==='aw'){try{const r=await this.getRow('Anniversary',id);return JSON.parse(r.data||'{}')}catch(e){return null}}return null},
+ async saveGift(id,o){if(this.type==='aw'){const data=JSON.stringify(o);return this.putRow('Anniversary',id,{id,data})}return this.saveSettings(o)},
+ async listMedia(kind){if(this.type==='aw'){const qs=[{method:'equal',attribute:'kind',values:[kind]},{method:'equal',attribute:'giftid',values:[giftId]},{method:'orderDesc',attribute:'$createdAt'},{method:'limit',values:[100]}];const r=await this.aw(this.awd('Media')+this.awq(...qs));return r.rows.map(m=>({id:m.$id,name:m.name,src:m.url||this.awurl(m.path),path:m.path}))}const r=await this.rest('media?kind=eq.'+kind+'&select=*&order=created_at.desc');return r.map(m=>({id:m.id,name:m.name,src:this.pub(m.path),path:m.path}))},
+ async addMedia(kind,name,blob,ext){if(this.type==='aw'){const fd=new FormData();fd.append('fileId','unique()');fd.append('file',blob,'f.'+ext);const f=await this.aw('/storage/buckets/anniversary/files',{method:'POST',body:fd});const url=this.awurl(f.$id);await this.awj(this.awd('Media'),'POST',{rowId:'unique()',data:{url,name,kind,path:f.$id,giftid:giftId}});return}const path=kind+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;await this.req('/storage/v1/object/anniversary/'+path,{method:'POST',headers:{'Content-Type':blob.type||'application/octet-stream'},body:blob});await this.json('media','POST',{kind,name,path})},
+ async delMedia(m){if(this.type==='aw'){await this.aw(this.awd('Media')+'/'+m.id,{method:'DELETE'});try{await this.aw('/storage/buckets/anniversary/files/'+m.path,{method:'DELETE'})}catch(e){}return}await this.rest('media?id=eq.'+m.id,{method:'DELETE'});try{await this.req('/storage/v1/object/anniversary/'+m.path,{method:'DELETE'})}catch(e){}},
+ async listWishes(){if(this.type==='aw'){const r=await this.aw(this.awd('wishes')+this.awq({method:'equal',attribute:'giftid',values:[giftId]},{method:'orderDesc',attribute:'$createdAt'},{method:'limit',values:[60]}));return r.rows.map(w=>({name:w.name,message:w.message||w.text,created_at:w.$createdAt}))}return this.rest('wishes?select=*&order=created_at.desc&limit=60')},
+ async addWish(name,message){if(this.type==='aw')return this.awj(this.awd('wishes'),'POST',{rowId:'unique()',data:{text:message,name:name||'',message,giftid:giftId}});return this.json('wishes','POST',{name:name||null,message},'return=minimal')},
+ async getSettings(){if(this.type==='aw'){try{const d=await this.getRow('Settings','main');return JSON.parse(d.data||'{}')}catch(e){return null}}const r=await this.rest('site_settings?id=eq.1&select=data');return r&&r[0]&&r[0].data},
+ async saveSettings(o){if(this.type==='aw'){const s=JSON.stringify(o);return this.putRow('Settings','main',{data:s})}await this.json('site_settings','POST',{id:1,data:o,updated_at:new Date().toISOString()},'resolution=merge-duplicates,return=minimal')},
+ async makeShort(code,url){if(this.type==='aw'){try{return await this.awj(this.awd('short_links')+'/'+encodeURIComponent(code),'PATCH',{data:{code,url}})}catch(e){return this.awj(this.awd('short_links'),'POST',{rowId:code,data:{code,url}})}}return this.json('short_links','POST',{code,url},'return=minimal')},
+ async resolveShort(code){if(this.type==='aw'){const d=await this.getRow('short_links',code);return d&&d.url}const r=await this.rest('short_links?code=eq.'+encodeURIComponent(code)+'&select=url');return r&&r[0]&&r[0].url}
+};
 
 /* ---------- local fallback for photos and songs (IndexedDB) ---------- */
 const idb={db:null,open(){return this.db?Promise.resolve(this.db):new Promise((res,rej)=>{try{const r=indexedDB.open('ann-files',1);r.onupgradeneeded=()=>r.result.createObjectStore('f',{keyPath:'id',autoIncrement:true});r.onsuccess=()=>res(this.db=r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
@@ -532,7 +520,7 @@ $('#lbPrev').onclick=()=>showLb(lbI-1);$('#lbNext').onclick=()=>showLb(lbI+1);$(
 $('#lbDel').onclick=async()=>{const p=photos[lbI];if(!p)return;if($('#lbDel').dataset.s!=='1'){$('#lbDel').dataset.s='1';$('#lbDel').textContent='Tap again to delete';return}
  $('#lbDel').dataset.s='';$('#lbDel').textContent='Delete';try{await Media.del(p);$('#lb').classList.remove('open');R.gallery();toast('Photo deleted')}catch(e){toast('Could not delete')}};
 $('#upPhoto').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving '+fs.length+' photo'+(fs.length>1?'s':'')+'...');
- try{for(const f of fs)await Media.add('photo',f);toast('Photos added');R.gallery()}catch(er){toast('Could not save. Check Supabase setup.')}};
+ try{for(const f of fs)await Media.add('photo',f);toast('Photos added');R.gallery()}catch(er){toast('Could not save. Check your Appwrite setup.')}};
 
 let typer;R.letter=()=>{const text=raw(C.letter),box=$('#letter'),sg=$('#sign');sg.textContent=raw(C.sign);clearInterval(typer);box.textContent='';sg.style.visibility='hidden';box.classList.add('caret');let i=0;
  typer=setInterval(()=>{i+=2;box.textContent=text.slice(0,i);if(i>=text.length){clearInterval(typer);box.classList.remove('caret');sg.style.visibility='visible'}},26)};
@@ -594,7 +582,7 @@ $('#tracks').onclick=async e=>{const x=e.target.closest('[data-del]');if(x){e.st
  const b=e.target.closest('button[data-i]');if(!b)return;const i=+b.dataset.i;if(i===Snd.i)Snd.toggle();else{Snd.stop();Snd.i=i;Snd.playing=false;Snd.play()}};
 async function loadSongs(){const mine=await Media.list('song');const cur=Snd.cur();Snd.list=[...SYN,...mine.map(m=>({title:m.name,note:'Your own song',src:m.src,mid:m}))];const k=Snd.list.findIndex(x=>x===cur||(cur&&x.src&&x.src===cur.src));Snd.i=k>-1?k:0;sync()}
 R.music=loadSongs;
-$('#upSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){toast('Could not save. Check Supabase setup.')}};
+$('#upSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){toast('Could not save. Check your Appwrite setup.')}};
 Snd.list=SYN.slice();sync();
 
 /* ---------- heart QR + short links ---------- */
@@ -626,21 +614,21 @@ R.qr=()=>{if(!$('#qrUrl').value)$('#qrUrl').value=QR.base();$('#lnkFull').value=
 $('#qrSave').onclick=()=>{try{const a=document.createElement('a');a.download='anniversary-qr.png';a.href=QR.cv.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()}catch(e){}toast('If nothing downloads, press and hold the picture')};
 $('#cpFull').onclick=()=>copy($('#lnkFull').value,$('#lnkFull'));$('#cpShort').onclick=()=>$('#lnkShort').value?copy($('#lnkShort').value,$('#lnkShort')):toast('Make a short link first');
 $('#mkShort').onclick=async()=>{if(!sb.on){toast('Connect Supabase or Appwrite first (last page)');return}const url=$('#qrUrl').value.trim()||QR.base();if(!/^https?:\/\//i.test(url)){toast('The link must start with https://');return}
- const al='abcdefghjkmnpqrstuvwxyz23456789';for(let k=0;k<4;k++){const code=Array.from({length:6},()=>al[Math.floor(Math.random()*al.length)]).join('');
-  try{await sb.makeShort(code,url);const s=QR.base()+'?s='+code;$('#lnkShort').value=s;$('#qrUrl').value=s;QR.draw();toast('Short link ready. The QR now uses it.');return}catch(e){if(!/duplicate|23505|409|already/i.test(String(e)))break}}
+ for(let k=0;k<1;k++){const code=giftId;
+  try{const snapshot={};KEYS.forEach(k=>snapshot[k]=C[k]);await sb.saveGift(code,snapshot);await sb.makeShort(code,QR.base()+'?g='+code);const s=QR.base()+'?s='+code;$('#lnkShort').value=s;$('#qrUrl').value=s;QR.draw();toast('Gift saved. Short link ready!');return}catch(e){if(!/duplicate|23505|409|already/i.test(String(e)))break}}
  toast('Could not make a short link. Did you run the setup?')};
 
 /* ---------- settings ---------- */
 const KEYS=['a','b','date','sign','story','timeline','letter','reasons'];
 R.settings=()=>{KEYS.forEach(k=>$('#f_'+k).value=C[k]);const c=sb.cfg();$('#sbUrl').value=c.url;$('#sbKey').value=c.key;$('#awProj').value=c.aw;$('#awEp').value=c.ep;$('#sbStatus').textContent=sb.type==='aw'?'Appwrite connected':sb.type==='sb'?'Supabase connected':'not connected'};
-async function persist(){const o={};KEYS.forEach(k=>o[k]=C[k]);LS.set('cfg',o);if(sb.on)await sb.saveSettings(o)}
+async function persist(){const o={};KEYS.forEach(k=>o[k]=C[k]);LS.set('cfg',o);if(sb.on){if(giftId!=='main')await sb.saveGift(giftId,o);else await sb.saveSettings(o)}}
 $('#save').onclick=async()=>{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();let msg='Saved on this device';try{await persist();if(sb.on)msg='Saved for everyone (online)'}catch(e){msg='Saved here. Online save failed, check the setup'}toast(msg);cur=-1;go(ids.indexOf('settings'))};
 $('#reset').onclick=e=>{if(!e.target.dataset.s){e.target.dataset.s=1;e.target.textContent='Tap again to reset';return}C={...DEF};LS.set('cfg',{});e.target.dataset.s='';e.target.textContent='Reset words';fillBasics();R.settings();toast('Words reset')};
 $('#sbSave').onclick=async()=>{const url=$('#sbUrl').value.trim().replace(/\/+$/,''),key=$('#sbKey').value.trim(),aw=$('#awProj').value.trim(),ep=$('#awEp').value.trim();
  if(!aw&&!(url&&key)){LS.set('sb',{});toast('Disconnected. Saving on this device only');R.settings();return}
  LS.set('sb',{url,key,aw,ep});try{await sb.ping();toast('Connected');await loadRemote();fillBasics()}catch(e){toast('Could not connect. Check the values and the setup steps')}R.settings()};
 $('#sbCopy').onclick=()=>{const aw=$('#awProj').value.trim();copy(aw?`const AW_PROJECT = '${aw}';\nconst AW_ENDPOINT = '${$('#awEp').value.trim()}';`:`const SB_URL = '${$('#sbUrl').value.trim()}';\nconst SB_KEY = '${$('#sbKey').value.trim()}';`)};
-async function loadRemote(){if(!sb.on)return;try{const d=await sb.getSettings();if(d&&Object.keys(d).length){C={...DEF,...d};LS.set('cfg',d)}}catch(e){}}
+async function loadRemote(){if(!sb.on)return;try{if(giftId!=='main'){const gift=await sb.getGift(giftId);if(gift&&Object.keys(gift).length){C={...DEF,...gift};LS.set('cfg',gift);return}}const d=await sb.getSettings();if(d&&Object.keys(d).length){C={...DEF,...d};LS.set('cfg',d)}}catch(e){}}
 
 $('#confetti').onclick=()=>{for(let i=0;i<6;i++)setTimeout(()=>burst(innerWidth*(.2+Math.random()*.6),innerHeight*(.25+Math.random()*.3),18),i*160)};
 

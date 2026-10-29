@@ -492,7 +492,7 @@ const idb={db:null,open(){return this.db?Promise.resolve(this.db):new Promise((r
  async run(m,f){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('f',m),q=f(t.objectStore('f'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})}};
 async function shrink(file,max=1280,quality=.82){try{const bm=await createImageBitmap(file);const k=Math.min(1,max/Math.max(bm.width,bm.height));const c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',quality))||file}catch(e){return file}}
 const Media={
- async list(kind){if(sb.on){try{return await sb.listMedia(kind)}catch(e){toast('Online storage: '+why(e))}return[]}
+ async list(kind){if(sb.on){try{return await sb.listMedia(kind)}catch(e){console.warn('Online media unavailable; using local fallback:',e)}}
   try{const a=await idb.run('readonly',s=>s.getAll());return a.filter(x=>x.kind===kind).reverse().map(x=>({id:x.id,name:x.name,src:URL.createObjectURL(x.blob),local:1}))}catch(e){return[]}},
  async add(kind,file){const name=file.name.replace(/\.[^.]+$/,'').slice(0,60)||'Memory';const blob=kind==='photo'?await shrink(file):file;
   if(sb.on){const ext=kind==='photo'?'jpg':(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3';await sb.addMedia(kind,name,blob,ext)}

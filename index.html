@@ -547,7 +547,7 @@ $('#fl').innerHTML=Array.from({length:9},(_,i)=>`<i style="left:${Math.random()*
 
 /* ---------- page renderers ---------- */
 const R={};let tick;
-function fillBasics(){$$('[data-a]').forEach(e=>e.textContent=C.a);$$('[data-b]').forEach(e=>e.textContent=C.b);
+function fillBasics(){const nameA=(C.a||'').trim()||'Your name',nameB=(C.b||'').trim()||'Their name';$$('[data-a]').forEach(e=>e.textContent=nameA);$$('[data-b]').forEach(e=>e.textContent=nameB);
  $$('[data-date]').forEach(e=>e.textContent=pd(C.date).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'}));
  $('#brand').textContent=C.a+' & '+C.b;document.title='Happy Anniversary '+C.a+' & '+C.b;$('#setupHint').hidden=!OWNER||!!LS.get('cfg',{}).a}
 R.home=()=>{const d=pd(C.date),now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),yrs=yearsBetween(d,now);
@@ -695,6 +695,8 @@ async function makeShare(){
  catch(e){console.error('Gift save failed:',e)}
 }
 $('#mkShort').onclick=makeShare;$('#mkShort2').onclick=makeShare;
+// Reflect chosen names in the gift heading immediately while editing.
+['#f_a','#f_b'].forEach((sel,idx)=>{const el=$(sel);if(el)el.addEventListener('input',()=>{C[idx===0?'a':'b']=el.value;fillBasics()})});
 const shareIt=async inp=>{const url=inp.value.trim();if(!url){toast('Make the short link first');return}try{if(navigator.share)await navigator.share({title:'A little anniversary gift',text:'I made this for you',url});else{await navigator.clipboard.writeText(url);toast('Link copied. Ready to share')}}catch(e){if(e&&e.name!=='AbortError')copy(url,inp)}};
 $('#shareShort').onclick=()=>shareIt($('#lnkShort'));$('#shareShort2').onclick=()=>shareIt($('#lnkShort2'));
 $('#cpShort2').onclick=()=>$('#lnkShort2').value?copy($('#lnkShort2').value,$('#lnkShort2')):toast('Make the short link first');

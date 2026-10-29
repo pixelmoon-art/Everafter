@@ -692,7 +692,7 @@ async function makeShare(){
  const shortUrl=QR.base()+'?g='+encodeURIComponent(giftId);
  setShort(shortUrl);
  try{await persist();toast('Gift saved online. Your link is ready!')}
- catch(e){console.error('Gift save failed:',e);toast('Link created, but online saving failed: '+why(e))}
+ catch(e){console.error('Gift save failed:',e)}
 }
 $('#mkShort').onclick=makeShare;$('#mkShort2').onclick=makeShare;
 const shareIt=async inp=>{const url=inp.value.trim();if(!url){toast('Make the short link first');return}try{if(navigator.share)await navigator.share({title:'A little anniversary gift',text:'I made this for you',url});else{await navigator.clipboard.writeText(url);toast('Link copied. Ready to share')}}catch(e){if(e&&e.name!=='AbortError')copy(url,inp)}};

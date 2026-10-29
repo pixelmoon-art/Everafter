@@ -683,12 +683,17 @@ R.qr=()=>{if(!$('#qrUrl').value)$('#qrUrl').value=QR.base()+'?g='+encodeURICompo
 $('#qrSave').onclick=()=>{try{const a=document.createElement('a');a.download='anniversary-qr.png';a.href=QR.cv.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()}catch(e){}toast('If nothing downloads, press and hold the picture')};
 $('#cpShort').onclick=()=>$('#lnkShort').value?copy($('#lnkShort').value,$('#lnkShort')):toast('Make a short link first');
 function setShort(s){['#lnkShort','#lnkShort2'].forEach(i=>{const e=$(i);if(e)e.value=s});$('#qrUrl').value=s;QR.draw();const g=$('#guestPrev');if(g){g.href=QR.base()+'?g='+encodeURIComponent(giftId)+'&v=1';g.hidden=false}}
-async function makeShare(){if(!sb.on){toast('Online sharing is not configured for this site yet');return}
- try{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();await persist();const code=giftId,root=QR.base();
- // The gift ID itself is the compact public code. Link directly to it so sharing
- // does not depend on a second short_links lookup/redirect.
- const shortUrl=root+'?g='+encodeURIComponent(code);setShort(shortUrl);toast('Saved online. Your short link is ready!')}
- catch(e){console.error('Short-link creation failed:',e);toast('Could not save: '+why(e))}}
+async function makeShare(){
+ // Show the compact gift URL immediately, even if online storage is unavailable.
+ // The same URL is used by the QR code; saving online is still required for guests
+ // on other devices to load the saved gift contents.
+ KEYS.forEach(k=>{const el=$('#f_'+k);if(el)C[k]=el.value||DEF[k]});
+ fillBasics();
+ const shortUrl=QR.base()+'?g='+encodeURIComponent(giftId);
+ setShort(shortUrl);
+ try{await persist();toast('Gift saved online. Your link is ready!')}
+ catch(e){console.error('Gift save failed:',e);toast('Link created, but online saving failed: '+why(e))}
+}
 $('#mkShort').onclick=makeShare;$('#mkShort2').onclick=makeShare;
 const shareIt=async inp=>{const url=inp.value.trim();if(!url){toast('Make the short link first');return}try{if(navigator.share)await navigator.share({title:'A little anniversary gift',text:'I made this for you',url});else{await navigator.clipboard.writeText(url);toast('Link copied. Ready to share')}}catch(e){if(e&&e.name!=='AbortError')copy(url,inp)}};
 $('#shareShort').onclick=()=>shareIt($('#lnkShort'));$('#shareShort2').onclick=()=>shareIt($('#lnkShort2'));

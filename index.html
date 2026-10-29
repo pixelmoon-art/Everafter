@@ -576,12 +576,12 @@ $('#rand').onclick=e=>{let n;do n=Math.floor(Math.random()*rs.length);while(n===
 
 /* wishes / guestbook */
 R.wishes=async()=>{$('#promises').innerHTML=PROMISES.map(p=>`<li>${esc(p)}</li>`).join('');let list;
- if(sb.on){try{list=await sb.listWishes()}catch(e){list=[];toast('Wishes: '+why(e))}}else list=LS.get('wishes',[]);
+ if(sb.on){try{list=await sb.listWishes()}catch(e){list=[];console.warn('Online wishes unavailable:',e)}}else list=LS.get('wishes',[]);
  $('#msgs').innerHTML=list.length?list.map(w=>`<li><b>${esc(w.name||'Someone who loves you')}</b><small>${new Date(w.created_at).toLocaleDateString()}</small><p>${esc(w.message)}</p></li>`).join(''):'<li><p class="hint">Wishes and messages will appear here.</p></li>'};
 $('#candle').onclick=()=>$('#candle').classList.toggle('out');
 $('#wForm').onsubmit=async e=>{e.preventDefault();const message=$('#wMsg').value.trim(),name=$('#wName').value.trim();if(!message)return;
  try{if(sb.on)await sb.addWish(name,message);else{const l=LS.get('wishes',[]);l.unshift({name,message,created_at:new Date().toISOString()});LS.set('wishes',l.slice(0,100))}
-  $('#wMsg').value='';$('#candle').classList.add('out');const r=$('#candle').getBoundingClientRect();burst(r.left+r.width/2,r.top+20,22);toast('Wish sent. Blow out the candle.');R.wishes()}catch(er){toast('Could not send: '+why(er))}};
+  $('#wMsg').value='';$('#candle').classList.add('out');const r=$('#candle').getBoundingClientRect();burst(r.left+r.width/2,r.top+20,22);toast('Wish sent. Blow out the candle.');R.wishes()}catch(er){console.warn('Wish could not be sent online:',er)}};
 
 /* ---------- music: gentle pieces synthesised live, plus uploaded songs ---------- */
 const SYN=[];  /* built-in songs removed: only songs you add on the edit page play */
@@ -626,7 +626,7 @@ async function loadSongs(){const mine=await Media.list('song');const links=(Arra
 R.music=loadSongs;
 
 
-$('#settingsUpSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){toast('Could not save: '+why(er))}};
+$('#settingsUpSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){console.warn('Online save unavailable:',er)}};
 $('#settingsSongLinkForm').onsubmit=async e=>{e.preventDefault();const title=$('#settingsSongLinkTitle').value.trim(),url=$('#settingsSongLinkUrl').value.trim();if(!title||!url)return;try{const u=new URL(url);if(!['http:','https:'].includes(u.protocol))throw new Error('Invalid URL');C.songLinks=Array.isArray(C.songLinks)?C.songLinks:[];C.songLinks.push({id:'sl-'+Date.now().toString(36),title:title.slice(0,80),src:u.href});await persist();await loadSongs();$('#settingsSongLinkTitle').value='';$('#settingsSongLinkUrl').value='';toast('Song link added to this gift')}catch(err){toast('Enter a valid https:// song link')}};
 $('#settingsTracks').onclick=async e=>{const x=e.target.closest('[data-del]');if(x){e.stopPropagation();const s=Snd.list[+x.dataset.del];try{if(s.mid)await Media.del(s.mid);if(s.link){C.songLinks=(C.songLinks||[]).filter(v=>(v.id||'')!==(s.id||s.linkId));await persist()}if(Snd.list[Snd.i]===s){Snd.stop();Snd.playing=false;Snd.i=0}await loadSongs();toast('Song removed')}catch(er){toast('Could not remove song')}return}const b=e.target.closest('button[data-i]');if(!b)return;const i=+b.dataset.i;if(i===Snd.i)Snd.toggle();else{Snd.stop();Snd.i=i;Snd.playing=false;Snd.play()}};
 Snd.list=SYN.slice();sync();
@@ -716,13 +716,13 @@ async function renderEditPhotos(){editPhotos=await Media.list('photo');
  $('#settingsPhotos').innerHTML=editPhotos.length?editPhotos.map((p,i)=>`<figure><img src="${p.src}" alt="${esc(p.name)}" loading="lazy"><button type="button" class="btn ghost" data-rm="${i}">Remove</button></figure>`).join(''):'<p class="hint">No photos yet.</p>';
  $('#bgAlbum').innerHTML=editPhotos.length?editPhotos.map((p,i)=>`<button type="button" class="album-pick" data-pick="${i}" aria-label="Use ${esc(p.name)} as background" aria-pressed="${C.backgroundData===p.src}"><img src="${p.src}" alt="" loading="lazy"></button>`).join(''):'<p class="hint">Add photos above, then tap one here to use it as the background.</p>'}
 $('#settingsUpPhoto').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving '+fs.length+' photo'+(fs.length>1?'s':'')+'...');
- try{for(const f of fs)await Media.add('photo',f);toast('Photos added');renderEditPhotos()}catch(er){toast('Could not save: '+why(er))}};
+ try{for(const f of fs)await Media.add('photo',f);toast('Photos added');renderEditPhotos()}catch(er){console.warn('Online save unavailable:',er)}};
 $('#settingsPhotos').onclick=async e=>{const b=e.target.closest('[data-rm]');if(!b)return;if(b.dataset.s!=='1'){b.dataset.s='1';b.textContent='Tap again';return}
  try{await Media.del(editPhotos[+b.dataset.rm]);toast('Photo removed');renderEditPhotos()}catch(er){toast('Could not remove the photo')}};
 $('#bgAlbum').onclick=e=>{const b=e.target.closest('[data-pick]');if(!b)return;const p=editPhotos[+b.dataset.pick];if(!p)return;if(p.local){toast('Connect online storage first, or this background will not be saved');return}
  C.backgroundData=p.src;C.backgroundPreset='custom';applyGiftBackground();syncBackgroundPicker();toast('Background set from your album. Tap Save changes.')};
 async function persist(){const o={};KEYS.forEach(k=>o[k]=C[k]);o.backgroundPreset=C.backgroundPreset||'paper';o.backgroundData=C.backgroundData||'';o.songLinks=Array.isArray(C.songLinks)?C.songLinks:[];LS.set('cfg',o);if(sb.on){if(giftId!=='main')await sb.saveGift(giftId,o);else await sb.saveSettings(o)}}
-$('#save').onclick=async()=>{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();let msg='Saved on this device';try{await persist();if(sb.on)msg='Saved online'}catch(e){msg='Saved here. Online save failed: '+why(e)}toast(msg);cur=-1;go(ids.indexOf('settings'))};
+$('#save').onclick=async()=>{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();let msg='Saved on this device';try{await persist();if(sb.on)msg='Saved online'}catch(e){msg='Saved on this device'}toast(msg);cur=-1;go(ids.indexOf('settings'))};
 $('#reset').onclick=e=>{if(!e.target.dataset.s){e.target.dataset.s=1;e.target.textContent='Tap again to reset';return}C={...DEF};LS.set('cfg',{});e.target.dataset.s='';e.target.textContent='Reset words';fillBasics();R.settings();applyGiftBackground();toast('Words reset')};
 async function loadRemote(){if(!sb.on)return;try{if(giftId!=='main'){const gift=await sb.getGift(giftId);if(gift&&Object.keys(gift).length){C={...DEF,...gift};LS.set('cfg',gift);return}}const d=await sb.getSettings();if(d&&Object.keys(d).length){C={...DEF,...d};LS.set('cfg',d)}}catch(e){}}
 

@@ -679,7 +679,7 @@ $('#presets').onclick=e=>{const b=e.target.closest('[data-p]');if(!b)return;cons
 $$('.seg[data-grp]').forEach(g=>g.onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=g.dataset.grp;if(k==='grad')QR.S.grad=!QR.S.grad;else QR.S[k]=b.dataset.v;QR.sync();QR.draw()});
 [['cFg','fg'],['cFr','fr'],['cBg','bg'],['cG2','g2']].forEach(([id,k])=>$('#'+id).oninput=e=>{QR.S[k]=e.target.value;QR.draw()});
 $('#qrUrl').oninput=QR.draw;
-R.qr=()=>{if(!$('#qrUrl').value)$('#qrUrl').value=QR.base()+'?g='+encodeURIComponent(giftId);QR.sync();(document.fonts&&document.fonts.load?document.fonts.load('56px "Great Vibes"'):Promise.resolve()).then(QR.draw,QR.draw);QR.draw()};
+R.qr=()=>{if(!$('#qrUrl').value)$('#qrUrl').value=QR.base()+'?g='+encodeURIComponent(giftId)+'&v=1';QR.sync();(document.fonts&&document.fonts.load?document.fonts.load('56px "Great Vibes"'):Promise.resolve()).then(QR.draw,QR.draw);QR.draw()};
 $('#qrSave').onclick=()=>{try{const a=document.createElement('a');a.download='anniversary-qr.png';a.href=QR.cv.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()}catch(e){}toast('If nothing downloads, press and hold the picture')};
 $('#cpShort').onclick=()=>$('#lnkShort').value?copy($('#lnkShort').value,$('#lnkShort')):toast('Make a short link first');
 function setShort(s){['#lnkShort','#lnkShort2'].forEach(i=>{const e=$(i);if(e)e.value=s});$('#qrUrl').value=s;QR.draw();const g=$('#guestPrev');if(g){g.href=QR.base()+'?g='+encodeURIComponent(giftId)+'&v=1';g.hidden=false}}
@@ -689,7 +689,7 @@ async function makeShare(){
  // on other devices to load the saved gift contents.
  KEYS.forEach(k=>{const el=$('#f_'+k);if(el)C[k]=el.value||DEF[k]});
  fillBasics();
- const shortUrl=QR.base()+'?g='+encodeURIComponent(giftId);
+ const shortUrl=QR.base()+'?g='+encodeURIComponent(giftId)+'&v=1';
  setShort(shortUrl);
  try{await persist();toast('Gift saved online. Your link is ready!')}
  catch(e){console.error('Gift save failed:',e)}

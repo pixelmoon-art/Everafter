@@ -500,9 +500,9 @@ const Media={
  async list(kind){if(sb.on){try{return await sb.listMedia(kind)}catch(e){console.warn('Online media unavailable; using local fallback:',e)}}
   try{const a=await idb.run('readonly',s=>s.getAll());return a.filter(x=>x.kind===kind).reverse().map(x=>({id:x.id,name:x.name,src:URL.createObjectURL(x.blob),local:1}))}catch(e){return[]}},
  async add(kind,file){const name=file.name.replace(/\.[^.]+$/,'').slice(0,60)||'Memory';const blob=kind==='photo'?await shrink(file):file;
-  if(sb.on){const ext=kind==='photo'?'jpg':(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3';await sb.addMedia(kind,name,blob,ext)}
-  else await idb.run('readwrite',s=>s.add({kind,name,blob}))},
- async del(m){if(sb.on)await sb.delMedia(m);else await idb.run('readwrite',s=>s.delete(m.id))}};
+  if(sb.on){try{const ext=kind==='photo'?'jpg':(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3';await sb.addMedia(kind,name,blob,ext);return}catch(e){console.warn('Online media save failed; keeping file on this device:',e)}}
+  await idb.run('readwrite',s=>s.add({kind,name,blob}))},
+ async del(m){if(sb.on&&!m.local){try{await sb.delMedia(m);return}catch(e){console.warn('Online media delete failed; trying local copy:',e)}}await idb.run('readwrite',s=>s.delete(m.id))}};
 
 /* ---------- content ---------- */
 const DEF={...SITE,backgroundPreset:'paper',backgroundData:'',songLinks:[]};

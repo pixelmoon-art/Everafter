@@ -101,7 +101,7 @@ h3{font-size:1.4rem;font-weight:600}
 .eyebrow{font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--soft)}
 .hint{font-size:.86rem;color:var(--soft)}
 
-/* backgrounds: each page picks one of the four; they cross-fade */
+/* One user-selected background is shared by every page. */
 .bgset{position:fixed;inset:0;z-index:-1;opacity:0;transition:opacity .7s}
 .bgset.on{opacity:1}
 .bgset i{position:absolute;display:block;background-size:cover;background-position:center top}
@@ -116,8 +116,6 @@ h3{font-size:1.4rem;font-weight:600}
 .page[data-pos=on]{opacity:1;visibility:visible;transform:none;transition-delay:0s}
 .sheet{width:min(100%,560px);margin:0 auto;display:flex;flex-direction:column;gap:24px;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px));padding-block:calc(150px + env(safe-area-inset-top,0px)) calc(130px + env(safe-area-inset-bottom,0px))}
 .sheet>*{min-width:0}
-[data-bg=hearts] .sheet{padding-top:calc(205px + env(safe-area-inset-top,0px))}
-[data-bg=bow] .sheet{padding-top:calc(clamp(190px,31svh,270px) + env(safe-area-inset-top,0px))}
 .head{display:flex;flex-direction:column;gap:6px}
 .head .script{font-size:clamp(2.8rem,13vw,4rem);line-height:1;text-shadow:0 0 14px rgba(255,250,247,.95),0 0 3px #fffaf7}
 .head .hint{max-width:36ch;text-shadow:0 0 10px #fffaf7,0 0 3px #fffaf7}
@@ -250,6 +248,8 @@ textarea{min-height:110px;resize:vertical;line-height:1.5}
 .seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px}.seg button[aria-pressed=true]{background:var(--wine);color:#fff;border-color:var(--wine)}
 .colors{display:flex;gap:12px;flex-wrap:wrap}.colors label{display:flex;gap:6px;align-items:center;font-size:.85rem}
 input[type=color]{width:40px;height:40px;padding:0;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px var(--line);background:none}
+.bg-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bg-choice{min-width:0;border:1px solid var(--line);border-radius:15px;background:#fff;padding:8px;display:flex;flex-direction:column;gap:7px;text-align:left;font-size:.86rem}.bg-choice[aria-pressed=true]{border:2px solid var(--wine);padding:7px;box-shadow:0 0 0 2px rgba(164,54,84,.12)}.bg-thumb{height:100px;border-radius:10px;background-size:cover;background-position:center}.bg-bow{background-image:var(--bow)}.bg-floral{background-image:var(--floral)}.bg-paper{background-image:var(--paper)}.bg-hearts{background-image:var(--hearts)}.bg-custom-preview{margin-top:12px;display:flex;flex-direction:column;gap:10px}.bg-custom-preview img{width:100%;max-height:240px;object-fit:cover;border-radius:14px;border:1px solid var(--line)}
+
 .lrow{display:flex;gap:8px}.lrow input{flex:1;min-width:0}
 code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;overflow-wrap:anywhere}
 .status{display:inline-block;border-radius:99px;padding:2px 12px;font-size:.78rem;background:var(--blush);color:var(--wine)}
@@ -261,6 +261,16 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
 .burst{position:fixed;width:22px;height:22px;pointer-events:none;z-index:90;clip-path:path("M11 20C-7 7 2-4 11 4C20-4 29 7 11 20Z");animation:bu 1.6s ease-out forwards}
 @keyframes bu{0%{opacity:1;transform:translate(0,0) scale(.4)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r)) scale(1.1)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}.fl{display:none}}
+
+[hidden]{display:none!important}
+.mgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.mgrid p{grid-column:1/-1}
+.mgrid figure{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.mgrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;border:1px solid var(--line);display:block}
+.mgrid figure .btn{padding:6px 8px;font-size:.78rem}
+.album-pick{padding:0;border:3px solid transparent;border-radius:14px;background:none;overflow:hidden;min-width:0}
+.album-pick img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.album-pick[aria-pressed=true]{border-color:var(--wine)}
 </style>
 </head>
 <body>
@@ -310,9 +320,8 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
 <section class="page" id="p-gallery" data-bg="hearts" data-title="Gallery" data-sub="Photos and keepsakes"><div class="sheet">
   <header class="head"><span class="script">Gallery</span><p class="hint">Tap a photo to see it big.</p></header>
   <div class="gal" id="gal"></div>
-  <div class="panel empty" id="galEmpty" hidden><h3>Your photos go here</h3><p class="hint">Add pictures of the two of you. They are saved with your Supabase project, or on this device if Supabase is not connected.</p></div>
-  <div class="row"><label class="btn" for="upPhoto" style="cursor:pointer">Add photos</label><input id="upPhoto" type="file" accept="image/*" multiple hidden></div>
-  <div class="lb" id="lb" role="dialog" aria-label="Photo viewer"><img id="lbImg" alt=""><p class="cap" id="lbCap"></p><div class="row c"><button class="btn ghost sm" id="lbPrev">Back</button><button class="btn ghost sm" id="lbNext">Next</button><button class="btn ghost sm" id="lbDel">Delete</button><button class="btn sm" id="lbClose">Close</button></div></div>
+  <div class="panel empty" id="galEmpty" hidden><h3>No photos yet</h3><p class="hint" id="galEmptyP"></p></div>
+  <div class="lb" id="lb" role="dialog" aria-label="Photo viewer"><img id="lbImg" alt=""><p class="cap" id="lbCap"></p><div class="row c"><button class="btn ghost sm" id="lbPrev">Back</button><button class="btn ghost sm" id="lbNext">Next</button><button class="btn sm" id="lbClose">Close</button></div></div>
 </div></section>
 
 <!-- 5 LETTER -->
@@ -332,7 +341,7 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
 
 <!-- 7 MUSIC -->
 <section class="page" id="p-music" data-bg="hearts" data-title="Our Songs" data-sub="The soundtrack"><div class="sheet">
-  <header class="head"><span class="script">Our Songs</span><p class="hint">Three gentle pieces play right here. Add your own songs too.</p></header>
+  <header class="head"><span class="script">Our Songs</span><p class="hint">Gentle pieces and songs chosen for you.</p></header>
   <div class="panel now" id="now">
     <div class="disc" aria-hidden="true"></div>
     <div><h3 id="npT"></h3><p class="hint" id="npN"></p></div>
@@ -341,7 +350,6 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
     <input class="vol" id="vol" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume">
   </div>
   <ul class="tracks" id="tracks"></ul>
-  <div class="row"><label class="btn ghost" for="upSong" style="cursor:pointer">Add your own song</label><input id="upSong" type="file" accept="audio/*" multiple hidden></div>
 </div></section>
 
 <!-- 8 WISHES -->
@@ -357,30 +365,49 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
   <div class="panel"><h3>My promises</h3><ul class="promises" id="promises"></ul></div>
 </div></section>
 
-<!-- EDITING PAGE: immediately before the final sharing page -->
-<section class="page" id="p-settings" data-bg="paper" data-title="Make it yours" data-sub="Edit names, words and settings"><div class="sheet">
-  <header class="head"><span class="script">Make it yours</span><p class="hint">Edit your gift here. Save your changes before sharing.</p></header>
+<!-- EDIT PAGE (only the owner sees this) -->
+<section class="page" id="p-settings" data-bg="paper" data-title="Make it yours" data-sub="Words, photos, songs, background"><div class="sheet">
+  <header class="head"><span class="script">Make it yours</span><p class="hint">Everything you can change is on this page. Save, then share the short link at the bottom.</p></header>
   <div class="panel"><div class="field"><label for="f_a">Your name</label><input id="f_a" type="text" maxlength="24"></div><div class="field"><label for="f_b">Their name</label><input id="f_b" type="text" maxlength="24"></div><div class="field"><label for="f_date">Day you started</label><input id="f_date" type="date"></div>
   <div class="field"><span class="lab">Colour of the site</span><div class="swatches" id="accents"></div></div></div>
   <div class="panel"><div class="field"><label for="f_letter">Love letter</label><textarea id="f_letter" rows="8"></textarea></div><div class="field"><label for="f_sign">Sign-off</label><input id="f_sign" type="text" maxlength="60"></div><p class="hint">Write {a} and {b} where the names should appear.</p></div>
   <div class="panel"><div class="field"><label for="f_story">Story (blank line between chapters, first line is the title)</label><textarea id="f_story" rows="10"></textarea></div></div>
   <div class="panel"><div class="field"><label for="f_timeline">Timeline (one per line: when | title | text)</label><textarea id="f_timeline" rows="8"></textarea></div></div>
   <div class="panel"><div class="field"><label for="f_reasons">Reasons (one per line)</label><textarea id="f_reasons" rows="8"></textarea></div></div>
+  <div class="panel" id="settingsPhotoPanel"><h3>Photos</h3>
+    <p class="hint" style="margin:8px 0 12px">These show in the Gallery. Photos can only be added or removed here.</p>
+    <div class="row"><label class="btn ghost" for="settingsUpPhoto" style="cursor:pointer">Choose photos from your album</label><input id="settingsUpPhoto" type="file" accept="image/*" multiple hidden></div>
+    <div class="mgrid" id="settingsPhotos"></div>
+  </div>
+  <div class="panel" id="settingsMusicPanel"><h3>Songs</h3>
+    <p class="hint" style="margin:8px 0 12px">Songs can only be added or removed here. They show up on the Our Songs page.</p>
+    <div class="row"><label class="btn ghost" for="settingsUpSong" style="cursor:pointer">Choose songs from files</label><input id="settingsUpSong" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac" multiple hidden></div>
+    <form id="settingsSongLinkForm" style="margin-top:14px"><div class="field"><label for="settingsSongLinkTitle">Song name</label><input id="settingsSongLinkTitle" type="text" maxlength="80" placeholder="Song title" required></div><div class="field"><label for="settingsSongLinkUrl">Song / audio link</label><input id="settingsSongLinkUrl" type="url" inputmode="url" placeholder="https://...mp3" required></div><button class="btn" type="submit">Add song link</button><p class="hint" style="margin-top:8px">Use a direct audio-file link. YouTube or Spotify page links usually cannot play directly.</p></form>
+    <h3 style="margin-top:16px">Songs in this gift</h3><ul class="tracks" id="settingsTracks"></ul>
+  </div>
+  <div class="panel" id="backgroundPanel"><h3>Background</h3>
+    <p class="hint" style="margin:8px 0 12px">One background for every page. Pick a preset, one of your album photos, or a picture from your phone.</p>
+    <div class="bg-choices" id="bgChoices">
+      <button type="button" class="bg-choice" data-bg-choice="bow" aria-pressed="false"><span class="bg-thumb bg-bow"></span><span>Pink floral heart</span></button>
+      <button type="button" class="bg-choice" data-bg-choice="paper" aria-pressed="false"><span class="bg-thumb bg-paper"></span><span>Vintage paper</span></button>
+      <button type="button" class="bg-choice" data-bg-choice="floral" aria-pressed="false"><span class="bg-thumb bg-floral"></span><span>Soft floral</span></button>
+      <button type="button" class="bg-choice" data-bg-choice="hearts" aria-pressed="false"><span class="bg-thumb bg-hearts"></span><span>Heart collage</span></button>
+    </div>
+    <div class="field" style="margin-top:16px"><span class="lab">From your photo album</span><div class="mgrid" id="bgAlbum"></div></div>
+    <div class="field" style="margin-top:8px"><label for="bgFile">Or pick a picture from your phone</label><input id="bgFile" type="file" accept="image/*"><p class="hint" style="margin-top:6px">It is compressed and saved with this gift.</p></div>
+    <div id="bgCustomPreview" class="bg-custom-preview" hidden><img id="bgPreviewImg" alt="Your selected background"><button type="button" class="btn ghost" id="bgRemove">Use a preset instead</button></div>
+  </div>
   <div class="row"><button class="btn" id="save">Save changes</button><button class="btn ghost" id="reset">Reset words</button></div>
-  <div class="panel"><h3>Online storage <span class="status" id="sbStatus"></span></h3>
-    <p class="hint" style="margin:8px 0 12px">Connect <b>Appwrite</b> or <b>Supabase</b> to save gifts online and share them across phones. Fill in only one provider.</p>
-    <p class="lab" style="margin-bottom:8px">Supabase</p>
-    <div class="field"><label for="sbUrl">Project URL</label><input id="sbUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off"></div>
-    <div class="field"><label for="sbKey">Anon public key</label><input id="sbKey" type="text" autocomplete="off"></div>
-    <p class="lab" style="margin:6px 0 8px">Appwrite</p>
-    <div class="field"><label for="awProj">Project ID</label><input id="awProj" type="text" autocomplete="off"></div>
-    <div class="field"><label for="awEp">API endpoint</label><input id="awEp" type="url" placeholder="https://sgp.cloud.appwrite.io/v1" autocomplete="off"></div>
-    <div class="row"><button class="btn" id="sbSave">Connect</button><button class="btn ghost" id="sbCopy">Copy lines for index.html</button></div>
-    <p class="hint" style="margin-top:8px">These settings are saved on this device. For a public website, configure the provider near the top of index.html before publishing.</p></div>
+  <div class="panel" id="sharePanel"><h3>Share</h3>
+    <p class="hint" style="margin:8px 0 12px">Tap the button to save everything and get a short link. People who open it see your gift, but not this page or the QR page.</p>
+    <div class="field"><label for="lnkShort2">Short link</label><div class="lrow"><input id="lnkShort2" type="text" readonly placeholder="Tap Save and make short link"><button class="btn sm" id="cpShort2" type="button">Copy</button></div></div>
+    <div class="row"><button class="btn" id="mkShort2" type="button">Save and make short link</button><button class="btn ghost" id="shareShort2" type="button">Share link</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn ghost sm" type="button" data-go="qr">Heart QR code</button><a class="btn ghost sm" id="guestPrev" target="_blank" rel="noopener" href="#" hidden>See it as a guest</a></div>
+  </div>
 </div></section>
 
-<!-- FINAL PAGE: QR, short link and sharing -->
-<section class="page" id="p-qr" data-bg="paper" data-title="QR and Link" data-sub="Heart QR, colours, short link"><div class="sheet">
+<!-- SHARE PAGE: QR and short link (only the owner sees this) -->
+<section class="page" id="p-qr" data-bg="paper" data-title="QR and Link" data-sub="QR, colours and short link"><div class="sheet">
   <header class="head"><span class="script">Share our love</span><p class="hint">A heart-shaped QR in your colours, and a short link.</p></header>
   <div class="panel qrbox"><img id="qrImg" alt="QR code" width="360" height="330"><p class="hint">Press and hold the picture to save it, or tap the button.</p><button class="btn" id="qrSave">Save QR image</button></div>
   <div class="panel">
@@ -393,10 +420,9 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
     <p class="hint" style="margin-top:10px">Keep the dots much darker than the paper, then test with your camera.</p>
   </div>
   <div class="panel"><h3>Short link</h3>
-    <div class="field" style="margin-top:12px"><label for="lnkFull">Full link</label><div class="lrow"><input id="lnkFull" type="text" readonly><button class="btn sm" id="cpFull">Copy</button></div></div>
-    <div class="field"><label for="lnkShort">Short link</label><div class="lrow"><input id="lnkShort" type="text" readonly placeholder="Tap Make short link"><button class="btn sm" id="cpShort">Copy</button></div></div>
-    <div class="row"><button class="btn" id="mkShort">Make short link</button><button class="btn ghost" id="shareShort">Share link</button></div>
-    <p class="hint" style="margin-top:8px">Save your edits first, then make a short link. Sharing opens your phone’s share menu when supported.</p>
+    <div class="field" style="margin-top:12px"><label for="lnkShort">Your gift link</label><div class="lrow"><input id="lnkShort" type="text" readonly placeholder="Tap Make short link"><button class="btn sm" id="cpShort">Copy</button></div></div>
+    <div class="row"><button class="btn" id="mkShort">Save & make link</button><button class="btn ghost" id="shareShort">Share link</button></div>
+    <p class="hint" style="margin-top:8px">The same short link opens your saved gift on another phone. The QR code uses this link too.</p>
   </div>
 </div></section>
 
@@ -420,8 +446,12 @@ const fmtT=t=>{t=Math.floor(t||0);return Math.floor(t/60)+':'+String(t%60).padSt
 /* ---------- Supabase REST + Appwrite TablesDB ---------- */
 const DBID='6ae1e2c30016f213ebfe';
 const T={Anniversary:'6ae1e326003c5dff2f26',short_links:'6ae20a13001d0280ad73',Settings:'6ae20cff002f16ddb1c2',Media:'6ae20d6c000a1d6b9cb7',wishes:'6ae20dcb0028773ccdd1'};
-let giftId=new URLSearchParams(location.search).get('g')||LS.get('draftGiftId','');
-if(!giftId){giftId=Array.from({length:7},()=>{const a='abcdefghjkmnpqrstuvwxyz23456789';return a[Math.floor(Math.random()*a.length)]}).join('');LS.set('draftGiftId',giftId)}
+const _q=new URLSearchParams(location.search),_gp=_q.get('g')||'',_sp=_q.get('s')||'';
+const rid=()=>Array.from({length:7},()=>{const a='abcdefghjkmnpqrstuvwxyz23456789';return a[Math.floor(Math.random()*a.length)]}).join('');
+let _draft=LS.get('draftGiftId','');if(!_draft){_draft=rid();LS.set('draftGiftId',_draft)}
+let giftId=_gp||_sp||_draft;
+/* OWNER: the phone/browser that made this gift. People who open the shared link are guests (no Edit or Share pages). Add &v=1 to the link to preview as a guest. */
+const OWNER=!_q.has('v')&&((!_gp&&!_sp)||_gp===_draft);
 const sb={
  cfg(){const l=LS.get('sb',{});return{url:(SB_URL||l.url||'').replace(/\/+$/,''),key:SB_KEY||l.key||'',aw:AW_PROJECT||l.aw||'',ep:(AW_ENDPOINT||l.ep||'https://cloud.appwrite.io/v1').replace(/\/+$/,'')}},
  get type(){const c=this.cfg();return c.aw?'aw':(c.url&&c.key?'sb':'')},get on(){return !!this.type},
@@ -452,7 +482,7 @@ const sb={
 /* ---------- local fallback for photos and songs (IndexedDB) ---------- */
 const idb={db:null,open(){return this.db?Promise.resolve(this.db):new Promise((res,rej)=>{try{const r=indexedDB.open('ann-files',1);r.onupgradeneeded=()=>r.result.createObjectStore('f',{keyPath:'id',autoIncrement:true});r.onsuccess=()=>res(this.db=r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
  async run(m,f){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('f',m),q=f(t.objectStore('f'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})}};
-async function shrink(file,max=1280){try{const bm=await createImageBitmap(file);const k=Math.min(1,max/Math.max(bm.width,bm.height));const c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',.82))||file}catch(e){return file}}
+async function shrink(file,max=1280,quality=.82){try{const bm=await createImageBitmap(file);const k=Math.min(1,max/Math.max(bm.width,bm.height));const c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',quality))||file}catch(e){return file}}
 const Media={
  async list(kind){if(sb.on){try{return await sb.listMedia(kind)}catch(e){toast('Could not reach your online storage')}return[]}
   try{const a=await idb.run('readonly',s=>s.getAll());return a.filter(x=>x.kind===kind).reverse().map(x=>({id:x.id,name:x.name,src:URL.createObjectURL(x.blob),local:1}))}catch(e){return[]}},
@@ -462,7 +492,7 @@ const Media={
  async del(m){if(sb.on)await sb.delMedia(m);else await idb.run('readwrite',s=>s.delete(m.id))}};
 
 /* ---------- content ---------- */
-const DEF={...SITE};
+const DEF={...SITE,backgroundPreset:'paper',backgroundData:'',songLinks:[]};
 const PROMISES=SITE.promises;
 let C={...DEF,...LS.get('cfg',{})};
 const sub=t=>esc(t).replace(/\{a\}/g,esc(C.a)).replace(/\{b\}/g,esc(C.b));
@@ -472,7 +502,10 @@ const yearsBetween=(d,n)=>{let y=n.getFullYear()-d.getFullYear();const m=n.getMo
 const nth=n=>{const w=['zero','first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth'];if(w[n])return w[n];const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])};
 
 /* ---------- pages + navigation ---------- */
-const pages=$$('.page'),ids=pages.map(p=>p.id.slice(2));let cur=-1;
+const OWN_ONLY=['p-settings','p-qr'];
+const pages=$$('.page').filter(p=>OWNER||!OWN_ONLY.includes(p.id)),ids=pages.map(p=>p.id.slice(2));let cur=-1;
+$$('.page').forEach(p=>{if(!pages.includes(p))p.style.display='none'});
+document.body.classList.toggle('guest',!OWNER);
 const bgs=$$('.bgset');
 $('#dots').innerHTML=pages.map(()=>'<i></i>').join('');
 $('#menu').innerHTML=pages.map((p,i)=>`<button data-i="${i}"><b>${p.dataset.title}</b><span>${p.dataset.sub}</span></button>`).join('');
@@ -483,7 +516,7 @@ $('#accents').onclick=e=>{const b=e.target.closest('.sw');if(b){setAccent(b.data
 setAccent(LS.get('accent','rose'));
 function go(i,instant){i=(i+pages.length)%pages.length;if(i===cur)return;
  pages.forEach((p,k)=>p.dataset.pos=k<i?'before':k===i?'on':'after');
- const p=pages[i];p.scrollTop=0;bgs.forEach(b=>b.classList.toggle('on',b.dataset.k===p.dataset.bg));
+ const p=pages[i];p.scrollTop=0;applyGiftBackground();
  $('#navT').textContent=p.dataset.title;$$('#dots i').forEach((d,k)=>d.classList.toggle('on',k===i));$$('#menu button').forEach((b,k)=>b.classList.toggle('cur',k===i));
  cur=i;try{history.replaceState(null,'','#'+ids[i])}catch(e){}
  (R[ids[i]]||(()=>{}))();$('#drawer').classList.remove('open')}
@@ -503,7 +536,7 @@ $('#fl').innerHTML=Array.from({length:9},(_,i)=>`<i style="left:${Math.random()*
 const R={};let tick;
 function fillBasics(){$$('[data-a]').forEach(e=>e.textContent=C.a);$$('[data-b]').forEach(e=>e.textContent=C.b);
  $$('[data-date]').forEach(e=>e.textContent=pd(C.date).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'}));
- $('#brand').textContent=C.a+' & '+C.b;document.title='Happy Anniversary '+C.a+' & '+C.b;$('#setupHint').hidden=!!LS.get('cfg',{}).a}
+ $('#brand').textContent=C.a+' & '+C.b;document.title='Happy Anniversary '+C.a+' & '+C.b;$('#setupHint').hidden=!OWNER||!!LS.get('cfg',{}).a}
 R.home=()=>{const d=pd(C.date),now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),yrs=yearsBetween(d,now);
  let next=new Date(now.getFullYear(),d.getMonth(),d.getDate());if(next<today)next=new Date(now.getFullYear()+1,d.getMonth(),d.getDate());
  const days=Math.round((next-today)/864e5),n=next.getFullYear()-d.getFullYear();
@@ -513,17 +546,12 @@ R.home=()=>{const d=pd(C.date),now=new Date(),today=new Date(now.getFullYear(),n
 R.story=()=>{$('#chapters').innerHTML=C.story.split(/\n\s*\n/).filter(b=>b.trim()).map((b,i)=>{const l=b.trim().split('\n'),t=l.shift();return `<article class="chap panel rise" style="animation-delay:${i*.08}s"><span class="n">${i+1}</span><h3>${sub(t)}</h3><p>${sub(l.join(' '))}</p></article>`}).join('')};
 R.timeline=()=>{$('#tl').innerHTML=C.timeline.split('\n').filter(l=>l.trim()).map((l,i)=>{const p=l.split('|').map(x=>x.trim());return `<li class="panel rise" style="animation-delay:${i*.07}s"><div class="when">${sub(p[0]||'')}</div><h3>${sub(p[1]||'')}</h3><p>${sub(p[2]||'')}</p></li>`}).join('')};
 
-let photos=[],lbI=0;
-R.gallery=async()=>{photos=await Media.list('photo');$('#galEmpty').hidden=photos.length>0;
+let photos=[],lbI=0,editPhotos=[];
+R.gallery=async()=>{photos=await Media.list('photo');$('#galEmpty').hidden=photos.length>0;$('#galEmptyP').textContent=OWNER?'Add photos on the Make it yours page, in the Photos section.':'Photos will show up here soon.';
  $('#gal').innerHTML=photos.map((p,i)=>`<figure data-i="${i}"><img src="${p.src}" alt="${esc(p.name)}" loading="lazy"><figcaption>${esc(p.name)}</figcaption></figure>`).join('')};
 const showLb=i=>{if(!photos.length)return;lbI=(i+photos.length)%photos.length;$('#lbImg').src=photos[lbI].src;$('#lbCap').textContent=photos[lbI].name;$('#lb').classList.add('open')};
 $('#gal').onclick=e=>{const f=e.target.closest('figure');if(f)showLb(+f.dataset.i)};
 $('#lbPrev').onclick=()=>showLb(lbI-1);$('#lbNext').onclick=()=>showLb(lbI+1);$('#lbClose').onclick=()=>$('#lb').classList.remove('open');
-$('#lbDel').onclick=async()=>{const p=photos[lbI];if(!p)return;if($('#lbDel').dataset.s!=='1'){$('#lbDel').dataset.s='1';$('#lbDel').textContent='Tap again to delete';return}
- $('#lbDel').dataset.s='';$('#lbDel').textContent='Delete';try{await Media.del(p);$('#lb').classList.remove('open');R.gallery();toast('Photo deleted')}catch(e){toast('Could not delete')}};
-$('#upPhoto').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving '+fs.length+' photo'+(fs.length>1?'s':'')+'...');
- try{for(const f of fs)await Media.add('photo',f);toast('Photos added');R.gallery()}catch(er){toast('Could not save. Check your Appwrite setup.')}};
-
 let typer;R.letter=()=>{const text=raw(C.letter),box=$('#letter'),sg=$('#sign');sg.textContent=raw(C.sign);clearInterval(typer);box.textContent='';sg.style.visibility='hidden';box.classList.add('caret');let i=0;
  typer=setInterval(()=>{i+=2;box.textContent=text.slice(0,i);if(i>=text.length){clearInterval(typer);box.classList.remove('caret');sg.style.visibility='visible'}},26)};
 $('#replay').onclick=R.letter;$('#seal').onclick=e=>burst(e.clientX,e.clientY,16);
@@ -543,12 +571,9 @@ $('#wForm').onsubmit=async e=>{e.preventDefault();const message=$('#wMsg').value
   $('#wMsg').value='';$('#candle').classList.add('out');const r=$('#candle').getBoundingClientRect();burst(r.left+r.width/2,r.top+20,22);toast('Wish sent. Blow out the candle.');R.wishes()}catch(er){toast('Could not send. Check your online setup.')}};
 
 /* ---------- music: gentle pieces synthesised live, plus uploaded songs ---------- */
-const SYN=[
- {title:'Forever Yours',note:'Music box in C',bpm:76,beats:4,prog:[[48,52,55],[45,48,52],[41,45,48],[43,47,50]],sc:[60,62,64,67,69,72,74,76],seed:1},
- {title:'Moonlit Waltz',note:'Slow waltz in G',bpm:92,beats:3,prog:[[43,47,50],[40,43,47],[36,40,43],[38,42,45]],sc:[67,69,71,74,76,79],seed:2},
- {title:'Golden Hour',note:'Gentle chords in F',bpm:62,beats:4,prog:[[41,45,48],[46,50,53],[36,40,43],[43,46,50]],sc:[65,67,69,72,74],seed:3}];
+const SYN=[];  /* built-in songs removed: only songs you add on the edit page play */
 const Snd={ctx:null,out:null,list:[],i:0,playing:false,au:new Audio(),timer:null,step:0,next:0,t0:0,vol:LS.get('vol',.8)};
-Snd.au.addEventListener('ended',()=>Snd.go(Snd.i+1));['play','pause'].forEach(ev=>Snd.au.addEventListener(ev,()=>Snd.cur().src&&sync()));
+Snd.au.addEventListener('ended',()=>Snd.go(Snd.i+1));['play','pause'].forEach(ev=>Snd.au.addEventListener(ev,()=>(Snd.cur()||{}).src&&sync()));
 const hz=n=>440*2**((n-69)/12),rnd=(s,k)=>{const x=Math.sin(s*127.1+k*311.7)*43758.5453;return x-Math.floor(x)};
 Snd.cur=()=>Snd.list[Snd.i]||Snd.list[0];
 Snd.ensure=()=>{if(Snd.ctx)return;const C2=window.AudioContext||window.webkitAudioContext;Snd.ctx=new C2();const g=Snd.ctx.createGain();g.gain.value=Snd.vol;const d=Snd.ctx.createDelay(1.5);d.delayTime.value=.38;const fb=Snd.ctx.createGain();fb.gain.value=.35;const wet=Snd.ctx.createGain();wet.gain.value=.5;
@@ -564,28 +589,57 @@ Snd.sched=()=>{const tr=Snd.cur(),c=Snd.ctx,spb=60/tr.bpm,sp=tr.beats*2;
   if(k%2===0&&rnd(tr.seed,bar*8+k)<.72)Snd.note(hz(tr.sc[Math.floor(rnd(tr.seed+9,bar*8+k)*tr.sc.length)]),t,3,.24,'bell');
   Snd.next+=spb/2;Snd.step++}};
 Snd.stop=()=>{clearInterval(Snd.timer);Snd.timer=null;Snd.au.pause();if(Snd.ctx&&Snd.ctx.state==='running')Snd.ctx.suspend()};
-Snd.play=async()=>{const tr=Snd.cur();Snd.playing=true;
+Snd.play=async()=>{const tr=Snd.cur();if(!tr){toast(OWNER?'Add a song on the Make it yours page first':'No songs yet');return}Snd.playing=true;
  if(tr.src){if(Snd.ctx)Snd.ctx.suspend();clearInterval(Snd.timer);Snd.timer=null;if(Snd.au.src!==tr.src)Snd.au.src=tr.src;Snd.au.volume=Snd.vol;try{await Snd.au.play()}catch(e){Snd.playing=false;toast('Tap play again to start the song')}}
  else{Snd.au.pause();Snd.ensure();await Snd.ctx.resume();if(!Snd.timer){Snd.next=Snd.ctx.currentTime+.1;Snd.step=0;Snd.t0=Snd.ctx.currentTime;Snd.timer=setInterval(Snd.sched,180);Snd.sched()}}
  sync()};
 Snd.pause=()=>{Snd.playing=false;Snd.stop();sync()};
 Snd.toggle=()=>Snd.playing?Snd.pause():Snd.play();
-Snd.go=i=>{const was=Snd.playing;Snd.stop();clearInterval(Snd.timer);Snd.timer=null;Snd.i=(i+Snd.list.length)%Snd.list.length;Snd.playing=false;sync();if(was||true)Snd.play()};
+Snd.go=i=>{if(!Snd.list.length)return;const was=Snd.playing;Snd.stop();clearInterval(Snd.timer);Snd.timer=null;Snd.i=(i+Snd.list.length)%Snd.list.length;Snd.playing=false;sync();if(was||true)Snd.play()};
 const PL='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5l11 7-11 7z"/></svg>',PA='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
 function sync(){const t=Snd.cur();document.body.classList.toggle('playing',Snd.playing);$('#mp').setAttribute('aria-label',Snd.playing?'Pause music':'Play music');$('#homePlay').textContent=Snd.playing?'Pause our song':'Play our song';
+ $('#mp').hidden=!t;$('#homePlay').hidden=!t;['#bar','.times','.ctrls','#vol'].forEach(q=>{const e=$(q);if(e)e.hidden=!t});
+ if(!t){$('#npT').textContent='No songs yet';$('#npN').textContent=OWNER?'Add songs on the Make it yours page.':'Songs will appear here soon.';$('#tracks').innerHTML='';const et=$('#settingsTracks');if(et)et.innerHTML='<li><p class="hint">No songs yet.</p></li>'}
  if(t){$('#npT').textContent=t.title;$('#npN').textContent=t.note;$('#pp').innerHTML=Snd.playing?PA:PL;$('#pp').setAttribute('aria-label',Snd.playing?'Pause':'Play');
-  $('#tracks').innerHTML=Snd.list.map((x,i)=>`<li><button data-i="${i}" class="${i===Snd.i?'cur':''}"><span><b>${esc(x.title)}</b><br><small>${esc(x.note)}</small></span>${x.mid?'<span class="x" data-del="'+i+'" role="button" aria-label="Remove song">Remove</span>':`<small>${i===Snd.i&&Snd.playing?'Playing':'Play'}</small>`}</button></li>`).join('')}}
+  const row=(x,i,edit)=>`<li><button data-i="${i}" class="${i===Snd.i?'cur':''}"><span><b>${esc(x.title)}</b><br><small>${esc(x.note)}</small></span>${edit&&(x.mid||x.link)?'<span class="x" data-del="'+i+'" role="button" aria-label="Remove song">Remove</span>':`<small>${i===Snd.i&&Snd.playing?'Playing':'Play'}</small>`}</button></li>`;
+  $('#tracks').innerHTML=Snd.list.map((x,i)=>row(x,i,false)).join('');const editTracks=$('#settingsTracks');if(editTracks)editTracks.innerHTML=Snd.list.map((x,i)=>row(x,i,true)).join('')}}
 setInterval(()=>{if(!Snd.playing)return;const t=Snd.cur();let e,d=null;if(t.src){e=Snd.au.currentTime;d=Snd.au.duration}else e=Snd.ctx.currentTime-Snd.t0;
  $('#cur').textContent=fmtT(e);$('#dur').textContent=d&&isFinite(d)?fmtT(d):'∞';$('#fill').style.width=(d&&isFinite(d)?e/d*100:(e%60)/60*100)+'%'},500);
 $('#mp').onclick=Snd.toggle;$('#homePlay').onclick=e=>{Snd.toggle();burst(e.clientX,e.clientY,12)};$('#pp').onclick=Snd.toggle;$('#pv').onclick=()=>Snd.go(Snd.i-1);$('#nx').onclick=()=>Snd.go(Snd.i+1);
 $('#vol').value=Snd.vol;$('#vol').oninput=e=>{Snd.vol=+e.target.value;LS.set('vol',Snd.vol);Snd.au.volume=Snd.vol;if(Snd.out)Snd.out.gain.value=Snd.vol};
 $('#bar').onclick=e=>{const t=Snd.cur();if(t.src&&isFinite(Snd.au.duration)){const r=e.currentTarget.getBoundingClientRect();Snd.au.currentTime=(e.clientX-r.left)/r.width*Snd.au.duration}};
-$('#tracks').onclick=async e=>{const x=e.target.closest('[data-del]');if(x){e.stopPropagation();const s=Snd.list[+x.dataset.del];try{await Media.del(s.mid);if(Snd.list[Snd.i]===s){Snd.stop();Snd.playing=false;Snd.i=0}await loadSongs();toast('Song removed')}catch(er){toast('Could not remove')}return}
- const b=e.target.closest('button[data-i]');if(!b)return;const i=+b.dataset.i;if(i===Snd.i)Snd.toggle();else{Snd.stop();Snd.i=i;Snd.playing=false;Snd.play()}};
-async function loadSongs(){const mine=await Media.list('song');const cur=Snd.cur();Snd.list=[...SYN,...mine.map(m=>({title:m.name,note:'Your own song',src:m.src,mid:m}))];const k=Snd.list.findIndex(x=>x===cur||(cur&&x.src&&x.src===cur.src));Snd.i=k>-1?k:0;sync()}
+$('#tracks').onclick=e=>{const b=e.target.closest('button[data-i]');if(!b)return;const i=+b.dataset.i;if(i===Snd.i)Snd.toggle();else{Snd.stop();Snd.i=i;Snd.playing=false;Snd.play()}};
+async function loadSongs(){const mine=await Media.list('song');const links=(Array.isArray(C.songLinks)?C.songLinks:[]).map((x,i)=>({...x,note:'Song link',linkId:x.id||('link-'+i),link:1}));const cur=Snd.cur();Snd.list=[...SYN,...mine.map(m=>({title:m.name,note:'Your own song',src:m.src,mid:m})),...links];const k=Snd.list.findIndex(x=>x===cur||(cur&&x.src&&x.src===cur.src)||(cur&&x.linkId&&x.linkId===cur.linkId));Snd.i=k>-1?k:0;sync()}
 R.music=loadSongs;
-$('#upSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){toast('Could not save. Check your Appwrite setup.')}};
+
+
+$('#settingsUpSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){toast('Could not save. Check your Appwrite setup.')}};
+$('#settingsSongLinkForm').onsubmit=async e=>{e.preventDefault();const title=$('#settingsSongLinkTitle').value.trim(),url=$('#settingsSongLinkUrl').value.trim();if(!title||!url)return;try{const u=new URL(url);if(!['http:','https:'].includes(u.protocol))throw new Error('Invalid URL');C.songLinks=Array.isArray(C.songLinks)?C.songLinks:[];C.songLinks.push({id:'sl-'+Date.now().toString(36),title:title.slice(0,80),src:u.href});await persist();await loadSongs();$('#settingsSongLinkTitle').value='';$('#settingsSongLinkUrl').value='';toast('Song link added to this gift')}catch(err){toast('Enter a valid https:// song link')}};
+$('#settingsTracks').onclick=async e=>{const x=e.target.closest('[data-del]');if(x){e.stopPropagation();const s=Snd.list[+x.dataset.del];try{if(s.mid)await Media.del(s.mid);if(s.link){C.songLinks=(C.songLinks||[]).filter(v=>(v.id||'')!==(s.id||s.linkId));await persist()}if(Snd.list[Snd.i]===s){Snd.stop();Snd.playing=false;Snd.i=0}await loadSongs();toast('Song removed')}catch(er){toast('Could not remove song')}return}const b=e.target.closest('button[data-i]');if(!b)return;const i=+b.dataset.i;if(i===Snd.i)Snd.toggle();else{Snd.stop();Snd.i=i;Snd.playing=false;Snd.play()}};
 Snd.list=SYN.slice();sync();
+
+/* ---------- shared background picker ---------- */
+const BG_KEYS=['bow','paper','floral','hearts'];
+function applyGiftBackground(){
+ const custom=String(C.backgroundData||'');
+ bgs.forEach((layer,i)=>{
+   const chosen=custom ? custom : '';
+   layer.classList.toggle('on',i===0);
+   for(const part of layer.querySelectorAll('i')){
+     if(chosen){part.style.backgroundImage=`url("${chosen}")`;part.style.backgroundPosition='center center';part.style.backgroundSize='cover'}
+     else {part.style.backgroundImage='';part.style.backgroundPosition='center top';part.style.backgroundSize='cover'}
+   }
+ });
+ if(!custom){const key=BG_KEYS.includes(C.backgroundPreset)?C.backgroundPreset:'paper';const source=document.querySelector(`.bgset[data-k="${key}"] .c`)||document.querySelector(`.bgset[data-k="${key}"] .w`);const src=source?getComputedStyle(source).backgroundImage:'';bgs[0].querySelectorAll('i').forEach(part=>{part.style.backgroundImage=src;part.style.backgroundPosition='center top';part.style.backgroundSize='cover'});}
+}
+function syncBackgroundPicker(){
+ $$('[data-bg-choice]').forEach(b=>b.setAttribute('aria-pressed',!C.backgroundData&&b.dataset.bgChoice===(C.backgroundPreset||'paper')));
+ $$('[data-pick]').forEach(b=>{const p=editPhotos[+b.dataset.pick];b.setAttribute('aria-pressed',!!p&&p.src===C.backgroundData)});
+ const box=$('#bgCustomPreview');if(box){box.hidden=!C.backgroundData;if(C.backgroundData)$('#bgPreviewImg').src=C.backgroundData;}
+}
+$('#bgChoices').onclick=e=>{const b=e.target.closest('[data-bg-choice]');if(!b)return;C.backgroundPreset=b.dataset.bgChoice;C.backgroundData='';applyGiftBackground();syncBackgroundPicker();toast('Background changed for every page')};
+$('#bgFile').onchange=async e=>{const file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;if(!file.type.startsWith('image/')){toast('Choose an image file');return}if(file.size>15*1024*1024){toast('Choose an image under 15 MB');return}try{toast('Preparing background...');const blob=await shrink(file,1000,.62);const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(r.error);r.readAsDataURL(blob)});if(data.length>650000){toast('That image is too large after compression. Try another image.');return}C.backgroundData=data;C.backgroundPreset='custom';applyGiftBackground();syncBackgroundPicker();toast('Background selected. Press Save changes to keep it in the gift.')}catch(err){console.error(err);toast('Could not load that image')}};
+$('#bgRemove').onclick=()=>{C.backgroundData='';C.backgroundPreset='paper';applyGiftBackground();syncBackgroundPicker();toast('Preset background selected')};
 
 /* ---------- heart QR + short links ---------- */
 const QR={S:{shape:'heart',frame:'heart',fg:'#8b2a48',bg:'#ffffff',fr:'#f4b6c2',grad:false,g2:'#d4607b'},
@@ -612,25 +666,33 @@ $('#presets').onclick=e=>{const b=e.target.closest('[data-p]');if(!b)return;cons
 $$('.seg[data-grp]').forEach(g=>g.onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=g.dataset.grp;if(k==='grad')QR.S.grad=!QR.S.grad;else QR.S[k]=b.dataset.v;QR.sync();QR.draw()});
 [['cFg','fg'],['cFr','fr'],['cBg','bg'],['cG2','g2']].forEach(([id,k])=>$('#'+id).oninput=e=>{QR.S[k]=e.target.value;QR.draw()});
 $('#qrUrl').oninput=QR.draw;
-R.qr=()=>{if(!$('#qrUrl').value)$('#qrUrl').value=QR.base()+'?g='+encodeURIComponent(giftId);$('#lnkFull').value=QR.base()+'?g='+encodeURIComponent(giftId);QR.sync();(document.fonts&&document.fonts.load?document.fonts.load('56px "Great Vibes"'):Promise.resolve()).then(QR.draw,QR.draw);QR.draw()};
+R.qr=()=>{if(!$('#qrUrl').value)$('#qrUrl').value=QR.base()+'?g='+encodeURIComponent(giftId);QR.sync();(document.fonts&&document.fonts.load?document.fonts.load('56px "Great Vibes"'):Promise.resolve()).then(QR.draw,QR.draw);QR.draw()};
 $('#qrSave').onclick=()=>{try{const a=document.createElement('a');a.download='anniversary-qr.png';a.href=QR.cv.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()}catch(e){}toast('If nothing downloads, press and hold the picture')};
-$('#cpFull').onclick=()=>copy($('#lnkFull').value,$('#lnkFull'));$('#cpShort').onclick=()=>$('#lnkShort').value?copy($('#lnkShort').value,$('#lnkShort')):toast('Make a short link first');
-$('#mkShort').onclick=async()=>{if(!sb.on){toast('Connect Appwrite or Supabase on the editing page first');go(ids.indexOf('settings'));return}
- const code=giftId;const root=QR.base();
- try{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();const snapshot={};KEYS.forEach(k=>snapshot[k]=C[k]);LS.set('cfg',snapshot);await sb.saveGift(code,snapshot);await sb.makeShort(code,root+'?g='+encodeURIComponent(code));const short=root+'?s='+encodeURIComponent(code);$('#lnkFull').value=root+'?g='+code;$('#lnkShort').value=short;$('#qrUrl').value=short;QR.draw();toast('Gift saved. Short link ready!')}
- catch(e){console.error('Short-link creation failed:',e);toast('Could not save/link this gift. Check Appwrite table permissions and setup.')}};
-$('#shareShort').onclick=async()=>{const url=$('#lnkShort').value.trim()||$('#lnkFull').value.trim();if(!url){toast('Make a short link first');return}try{if(navigator.share){await navigator.share({title:'A little anniversary gift',text:'I made this for you 💗',url});}else{await navigator.clipboard.writeText(url);toast('Link copied — ready to share')}}catch(e){if(e&&e.name!=='AbortError'){copy(url,$('#lnkShort'))}}};
+$('#cpShort').onclick=()=>$('#lnkShort').value?copy($('#lnkShort').value,$('#lnkShort')):toast('Make a short link first');
+function setShort(s){['#lnkShort','#lnkShort2'].forEach(i=>{const e=$(i);if(e)e.value=s});$('#qrUrl').value=s;QR.draw();const g=$('#guestPrev');if(g){g.href=QR.base()+'?g='+encodeURIComponent(giftId)+'&v=1';g.hidden=false}}
+async function makeShare(){if(!sb.on){toast('Online sharing is not configured for this site yet');return}
+ try{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();await persist();const code=giftId,root=QR.base();await sb.makeShort(code,root+'?g='+encodeURIComponent(code));setShort(root+'?s='+encodeURIComponent(code));toast('Saved. Your short link is ready!')}
+ catch(e){console.error('Short-link creation failed:',e);toast('Could not save/link this gift. Check Appwrite table permissions and setup.')}}
+$('#mkShort').onclick=makeShare;$('#mkShort2').onclick=makeShare;
+const shareIt=async inp=>{const url=inp.value.trim();if(!url){toast('Make the short link first');return}try{if(navigator.share)await navigator.share({title:'A little anniversary gift',text:'I made this for you',url});else{await navigator.clipboard.writeText(url);toast('Link copied. Ready to share')}}catch(e){if(e&&e.name!=='AbortError')copy(url,inp)}};
+$('#shareShort').onclick=()=>shareIt($('#lnkShort'));$('#shareShort2').onclick=()=>shareIt($('#lnkShort2'));
+$('#cpShort2').onclick=()=>$('#lnkShort2').value?copy($('#lnkShort2').value,$('#lnkShort2')):toast('Make the short link first');
 
 /* ---------- settings ---------- */
 const KEYS=['a','b','date','sign','story','timeline','letter','reasons'];
-R.settings=()=>{KEYS.forEach(k=>$('#f_'+k).value=C[k]);const c=sb.cfg();$('#sbUrl').value=c.url;$('#sbKey').value=c.key;$('#awProj').value=c.aw;$('#awEp').value=c.ep;$('#sbStatus').textContent=sb.type==='aw'?'Appwrite connected':sb.type==='sb'?'Supabase connected':'not connected'};
-async function persist(){const o={};KEYS.forEach(k=>o[k]=C[k]);LS.set('cfg',o);if(sb.on){if(giftId!=='main')await sb.saveGift(giftId,o);else await sb.saveSettings(o)}}
-$('#save').onclick=async()=>{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();let msg='Saved on this device';try{await persist();if(sb.on)msg='Saved for everyone (online)'}catch(e){msg='Saved here. Online save failed, check the setup'}toast(msg);cur=-1;go(ids.indexOf('settings'))};
-$('#reset').onclick=e=>{if(!e.target.dataset.s){e.target.dataset.s=1;e.target.textContent='Tap again to reset';return}C={...DEF};LS.set('cfg',{});e.target.dataset.s='';e.target.textContent='Reset words';fillBasics();R.settings();toast('Words reset')};
-$('#sbSave').onclick=async()=>{const url=$('#sbUrl').value.trim().replace(/\/+$/,''),key=$('#sbKey').value.trim(),aw=$('#awProj').value.trim(),ep=$('#awEp').value.trim();
- if(!aw&&!(url&&key)){LS.set('sb',{});toast('Disconnected. Saving on this device only');R.settings();return}
- LS.set('sb',{url,key,aw,ep});try{await sb.ping();toast('Connected');await loadRemote();fillBasics()}catch(e){toast('Could not connect. Check the values and the setup steps')}R.settings()};
-$('#sbCopy').onclick=()=>{const aw=$('#awProj').value.trim();copy(aw?`const AW_PROJECT = '${aw}';\nconst AW_ENDPOINT = '${$('#awEp').value.trim()}';`:`const SB_URL = '${$('#sbUrl').value.trim()}';\nconst SB_KEY = '${$('#sbKey').value.trim()}';`)};
+R.settings=()=>{KEYS.forEach(k=>{const el=$('#f_'+k);if(el)el.value=C[k]??''});syncBackgroundPicker();renderEditPhotos();loadSongs()};
+async function renderEditPhotos(){editPhotos=await Media.list('photo');
+ $('#settingsPhotos').innerHTML=editPhotos.length?editPhotos.map((p,i)=>`<figure><img src="${p.src}" alt="${esc(p.name)}" loading="lazy"><button type="button" class="btn ghost" data-rm="${i}">Remove</button></figure>`).join(''):'<p class="hint">No photos yet.</p>';
+ $('#bgAlbum').innerHTML=editPhotos.length?editPhotos.map((p,i)=>`<button type="button" class="album-pick" data-pick="${i}" aria-label="Use ${esc(p.name)} as background" aria-pressed="${C.backgroundData===p.src}"><img src="${p.src}" alt="" loading="lazy"></button>`).join(''):'<p class="hint">Add photos above, then tap one here to use it as the background.</p>'}
+$('#settingsUpPhoto').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving '+fs.length+' photo'+(fs.length>1?'s':'')+'...');
+ try{for(const f of fs)await Media.add('photo',f);toast('Photos added');renderEditPhotos()}catch(er){toast('Could not save. Check your Appwrite setup.')}};
+$('#settingsPhotos').onclick=async e=>{const b=e.target.closest('[data-rm]');if(!b)return;if(b.dataset.s!=='1'){b.dataset.s='1';b.textContent='Tap again';return}
+ try{await Media.del(editPhotos[+b.dataset.rm]);toast('Photo removed');renderEditPhotos()}catch(er){toast('Could not remove the photo')}};
+$('#bgAlbum').onclick=e=>{const b=e.target.closest('[data-pick]');if(!b)return;const p=editPhotos[+b.dataset.pick];if(!p)return;if(p.local){toast('Connect online storage first, or this background will not be saved');return}
+ C.backgroundData=p.src;C.backgroundPreset='custom';applyGiftBackground();syncBackgroundPicker();toast('Background set from your album. Tap Save changes.')};
+async function persist(){const o={};KEYS.forEach(k=>o[k]=C[k]);o.backgroundPreset=C.backgroundPreset||'paper';o.backgroundData=C.backgroundData||'';o.songLinks=Array.isArray(C.songLinks)?C.songLinks:[];LS.set('cfg',o);if(sb.on){if(giftId!=='main')await sb.saveGift(giftId,o);else await sb.saveSettings(o)}}
+$('#save').onclick=async()=>{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();let msg='Saved on this device';try{await persist();if(sb.on)msg='Saved online'}catch(e){msg='Saved here, but online save failed'}toast(msg);cur=-1;go(ids.indexOf('settings'))};
+$('#reset').onclick=e=>{if(!e.target.dataset.s){e.target.dataset.s=1;e.target.textContent='Tap again to reset';return}C={...DEF};LS.set('cfg',{});e.target.dataset.s='';e.target.textContent='Reset words';fillBasics();R.settings();applyGiftBackground();toast('Words reset')};
 async function loadRemote(){if(!sb.on)return;try{if(giftId!=='main'){const gift=await sb.getGift(giftId);if(gift&&Object.keys(gift).length){C={...DEF,...gift};LS.set('cfg',gift);return}}const d=await sb.getSettings();if(d&&Object.keys(d).length){C={...DEF,...d};LS.set('cfg',d)}}catch(e){}}
 
 $('#confetti').onclick=()=>{for(let i=0;i<6;i++)setTimeout(()=>burst(innerWidth*(.2+Math.random()*.6),innerHeight*(.25+Math.random()*.3),18),i*160)};
@@ -639,8 +701,8 @@ $('#confetti').onclick=()=>{for(let i=0;i<6;i++)setTimeout(()=>burst(innerWidth*
 async function boot(){
  const sc=new URLSearchParams(location.search).get('s');
  if(sc&&sb.on){try{const u=await sb.resolveShort(sc);if(u&&/^https?:\/\//i.test(u)){location.replace(u);return}}catch(e){}}
- fillBasics();let i=ids.indexOf(location.hash.slice(1));go(i>-1?i:0);
- await loadRemote();fillBasics();R[ids[cur]]&&R[ids[cur]]();
+ fillBasics();applyGiftBackground();syncBackgroundPicker();let i=ids.indexOf(location.hash.slice(1));go(i>-1?i:0);
+ await loadRemote();fillBasics();applyGiftBackground();syncBackgroundPicker();loadSongs();R[ids[cur]]&&R[ids[cur]]();
 }
 addEventListener('DOMContentLoaded',boot);
 })();

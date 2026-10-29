@@ -271,6 +271,11 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
 .album-pick{padding:0;border:3px solid transparent;border-radius:14px;background:none;overflow:hidden;min-width:0}
 .album-pick img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
 .album-pick[aria-pressed=true]{border-color:var(--wine)}
+
+/* Keep the creator flow clean: one visible short-link area only. */
+#checkPanel{display:none!important}
+#p-qr .panel.short-link-panel{display:none!important}
+#p-qr .field.qr-url-field{display:none!important}
 </style>
 </head>
 <body>
@@ -367,7 +372,7 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
 
 <!-- EDIT PAGE (only the owner sees this) -->
 <section class="page" id="p-settings" data-bg="paper" data-title="Make it yours" data-sub="Words, photos, songs, background"><div class="sheet">
-  <header class="head"><span class="script">Make it yours</span><p class="hint">Everything you can change is on this page. Save, then share the short link at the bottom.</p></header>
+  <header class="head"><span class="script">Make it yours</span><p class="hint">Everything you can change is on this page. Save once, then share your short link.</p></header>
   <div class="panel"><div class="field"><label for="f_a">Your name</label><input id="f_a" type="text" maxlength="24"></div><div class="field"><label for="f_b">Their name</label><input id="f_b" type="text" maxlength="24"></div><div class="field"><label for="f_date">Day you started</label><input id="f_date" type="date"></div>
   <div class="field"><span class="lab">Colour of the site</span><div class="swatches" id="accents"></div></div></div>
   <div class="panel"><div class="field"><label for="f_letter">Love letter</label><textarea id="f_letter" rows="8"></textarea></div><div class="field"><label for="f_sign">Sign-off</label><input id="f_sign" type="text" maxlength="60"></div><p class="hint">Write {a} and {b} where the names should appear.</p></div>
@@ -415,7 +420,7 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
   <header class="head"><span class="script">Share our love</span><p class="hint">A heart-shaped QR in your colours, and a short link.</p></header>
   <div class="panel qrbox"><img id="qrImg" alt="QR code" width="360" height="330"><p class="hint">Press and hold the picture to save it, or tap the button.</p><button class="btn" id="qrSave">Save QR image</button></div>
   <div class="panel">
-    <div class="field"><label for="qrUrl">Link inside the QR</label><input id="qrUrl" type="url" inputmode="url" autocomplete="off"></div>
+    <div class="field qr-url-field"><label for="qrUrl">Link inside the QR</label><input id="qrUrl" type="url" inputmode="url" autocomplete="off"></div>
     <div class="field"><span class="lab">Dots</span><div class="seg" data-grp="shape"><button data-v="heart" aria-pressed="true">Hearts</button><button data-v="dot" aria-pressed="false">Dots</button><button data-v="square" aria-pressed="false">Squares</button></div></div>
     <div class="field"><span class="lab">Shape around it</span><div class="seg" data-grp="frame"><button data-v="heart" aria-pressed="true">Heart</button><button data-v="card" aria-pressed="false">Card</button><button data-v="none" aria-pressed="false">None</button></div></div>
     <div class="field"><span class="lab">Colour sets</span><div class="swatches" id="presets"></div></div>
@@ -423,7 +428,7 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
     <div class="seg" data-grp="grad"><button data-v="1" aria-pressed="false">Colour fade</button></div>
     <p class="hint" style="margin-top:10px">Keep the dots much darker than the paper, then test with your camera.</p>
   </div>
-  <div class="panel"><h3>Short link</h3>
+  <div class="panel short-link-panel"><h3>Short link</h3>
     <div class="field" style="margin-top:12px"><label for="lnkShort">Your gift link</label><div class="lrow"><input id="lnkShort" type="text" readonly placeholder="Tap Make short link"><button class="btn sm" id="cpShort">Copy</button></div></div>
     <div class="row"><button class="btn" id="mkShort">Save & make link</button><button class="btn ghost" id="shareShort">Share link</button></div>
     <p class="hint" style="margin-top:8px">The same short link opens your saved gift on another phone. The QR code uses this link too.</p>

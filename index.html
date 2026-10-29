@@ -404,6 +404,10 @@ code{background:var(--blush);padding:1px 6px;border-radius:6px;font-size:.85em;o
     <div class="row"><button class="btn" id="mkShort2" type="button">Save and make short link</button><button class="btn ghost" id="shareShort2" type="button">Share link</button></div>
     <div class="row" style="margin-top:10px"><button class="btn ghost sm" type="button" data-go="qr">Heart QR code</button><a class="btn ghost sm" id="guestPrev" target="_blank" rel="noopener" href="#" hidden>See it as a guest</a></div>
   </div>
+  <div class="panel" id="checkPanel"><h3>Check connection</h3>
+    <p class="hint" style="margin:8px 0 12px">If saving, sharing or wishes fail, tap this and read what it says.</p>
+    <button class="btn ghost" id="checkBtn" type="button">Check setup</button><ul class="msgs" id="checkOut" style="margin-top:12px"></ul>
+  </div>
 </div></section>
 
 <!-- SHARE PAGE: QR and short link (only the owner sees this) -->
@@ -441,6 +445,7 @@ const HEART='<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 
 let tt;const toast=m=>{let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2400)};
 const copy=(txt,inp)=>{const fb=()=>{try{inp&&(inp.focus(),inp.select());document.execCommand('copy');toast('Copied')}catch(e){toast('Press and hold the text to copy')}};try{navigator.clipboard.writeText(txt).then(()=>toast('Copied'),fb)}catch(e){fb()}};
 function burst(x,y,n=20){const cols=['#d4607b','#8b2a48','#f0a3b3','#b98a5c','#e8788f'];for(let i=0;i<n;i++){const h=document.createElement('i');h.className='burst';const a=Math.random()*6.283,d=60+Math.random()*170;h.style.cssText=`left:${x-11}px;top:${y-11}px;background:${cols[i%5]};--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d-40}px;--r:${Math.random()*120-60}deg`;document.body.appendChild(h);setTimeout(()=>h.remove(),1700)}}
+const why=e=>{const m=String((e&&e.message)||e||'');if(/Web platform|Failed to fetch|NetworkError|Load failed/i.test(m))return 'Appwrite blocked this site. Add '+location.hostname+' as a Web platform in Appwrite.';if(/unauthorized|missing scope|permission|401/i.test(m))return 'Permission denied. Give role Any the needed access on that table.';if(/index/i.test(m))return 'A column needs an index (see Check setup).';if(/Unknown attribute|Invalid document structure|column/i.test(m))return 'A column is missing or wrong: '+m.slice(0,90);if(/not.?found|404/i.test(m))return 'Table, row or bucket ID not found.';return m.slice(0,110)};
 const fmtT=t=>{t=Math.floor(t||0);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 
 /* ---------- Supabase REST + Appwrite TablesDB ---------- */
@@ -458,24 +463,27 @@ const sb={
  async req(p,o={}){const c=this.cfg();const r=await fetch(c.url+p,{...o,headers:{apikey:c.key,Authorization:'Bearer '+c.key,...(o.headers||{})}});if(!r.ok)throw new Error((await r.text())||r.status);const t=await r.text();return t?JSON.parse(t):null},
  rest(p,o){return this.req('/rest/v1/'+p,o)},json(p,method,body,prefer='return=representation'){return this.rest(p,{method,headers:{'Content-Type':'application/json',Prefer:prefer},body:JSON.stringify(body)})},
  pub:path=>sb.cfg().url+'/storage/v1/object/public/anniversary/'+path,
- async aw(p,o={}){const c=this.cfg();const r=await fetch(c.ep+p,{...o,headers:{'X-Appwrite-Project':c.aw,...(o.headers||{})}});if(!r.ok)throw new Error((await r.text())||r.status);const t=await r.text();return t?JSON.parse(t):null},
+ async aw(p,o={}){const c=this.cfg();let r;try{r=await fetch(c.ep+p,{...o,headers:{'X-Appwrite-Project':c.aw,...(o.headers||{})}})}catch(e){throw new Error('Failed to fetch (Web platform not allowed?)')}
+  const tx=await r.text();if(!r.ok){let m=tx;try{const j=JSON.parse(tx);m=(j.type?j.type+': ':'')+(j.message||tx)}catch(e){}const er=new Error(m||('HTTP '+r.status));er.status=r.status;throw er}return tx?JSON.parse(tx):null},
  awj(p,method,body){return this.aw(p,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})},
  awd:table=>`/tablesdb/${DBID}/tables/${T[table]}/rows`,
  awq:(...qs)=>'?'+qs.map(q=>'queries[]='+encodeURIComponent(JSON.stringify(q))).join('&'),
  awurl(id){const c=this.cfg();return c.ep+'/storage/buckets/anniversary/files/'+id+'/view?project='+c.aw},
  async ping(){if(this.type==='aw')return this.aw(this.awd('Settings')+this.awq({method:'limit',values:[1]}));return this.rest('site_settings?select=id&limit=1')},
  async getRow(table,id){return this.aw(this.awd(table)+'/'+encodeURIComponent(id))},
- async putRow(table,id,data){try{return await this.awj(this.awd(table)+'/'+encodeURIComponent(id),'PATCH',{data})}catch(e){return this.awj(this.awd(table),'POST',{rowId:id,data})}},
+ async tolerant(fn,data){let d={...data};for(let i=0;i<6;i++){try{return await fn(d)}catch(e){const m=/Unknown attribute:?\s*"?([\w$]+)"?/i.exec(String(e.message));if(m&&m[1] in d&&Object.keys(d).length>1){delete d[m[1]];continue}throw e}}},
+ async putRow(table,id,data){return this.tolerant(async d=>{try{return await this.awj(this.awd(table)+'/'+encodeURIComponent(id),'PATCH',{data:d})}catch(e){if(e.status===404||/not.?found/i.test(e.message))return this.awj(this.awd(table),'POST',{rowId:id,data:d});throw e}},data)},
+ async awList(table,filters,limit=100){const tail=[{method:'orderDesc',attribute:'$createdAt'},{method:'limit',values:[limit]}];try{return (await this.aw(this.awd(table)+this.awq(...filters,...tail))).rows}catch(e){if(/index|attribute|invalid query/i.test(e.message)){const r=await this.aw(this.awd(table)+this.awq(...tail));return r.rows.filter(x=>filters.every(f=>(f.values||[]).includes(x[f.attribute])))}throw e}},
  async getGift(id){if(this.type==='aw'){try{const r=await this.getRow('Anniversary',id);return JSON.parse(r.data||'{}')}catch(e){return null}}return null},
  async saveGift(id,o){if(this.type==='aw'){const data=JSON.stringify(o);return this.putRow('Anniversary',id,{id,data})}return this.saveSettings(o)},
- async listMedia(kind){if(this.type==='aw'){const qs=[{method:'equal',attribute:'kind',values:[kind]},{method:'equal',attribute:'giftid',values:[giftId]},{method:'orderDesc',attribute:'$createdAt'},{method:'limit',values:[100]}];const r=await this.aw(this.awd('Media')+this.awq(...qs));return r.rows.map(m=>({id:m.$id,name:m.name,src:m.url||this.awurl(m.path),path:m.path}))}const r=await this.rest('media?kind=eq.'+kind+'&select=*&order=created_at.desc');return r.map(m=>({id:m.id,name:m.name,src:this.pub(m.path),path:m.path}))},
- async addMedia(kind,name,blob,ext){if(this.type==='aw'){const fd=new FormData();fd.append('fileId','unique()');fd.append('file',blob,'f.'+ext);const f=await this.aw('/storage/buckets/anniversary/files',{method:'POST',body:fd});const url=this.awurl(f.$id);await this.awj(this.awd('Media'),'POST',{rowId:'unique()',data:{url,name,kind,path:f.$id,giftid:giftId}});return}const path=kind+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;await this.req('/storage/v1/object/anniversary/'+path,{method:'POST',headers:{'Content-Type':blob.type||'application/octet-stream'},body:blob});await this.json('media','POST',{kind,name,path})},
+ async listMedia(kind){if(this.type==='aw'){const rows=await this.awList('Media',[{method:'equal',attribute:'kind',values:[kind]},{method:'equal',attribute:'giftid',values:[giftId]}]);return rows.map(m=>({id:m.$id,name:m.name,src:m.url||this.awurl(m.path),path:m.path}))}const r=await this.rest('media?kind=eq.'+kind+'&select=*&order=created_at.desc');return r.map(m=>({id:m.id,name:m.name,src:this.pub(m.path),path:m.path}))},
+ async addMedia(kind,name,blob,ext){if(this.type==='aw'){const fd=new FormData();fd.append('fileId','unique()');fd.append('file',blob,'f.'+ext);const f=await this.aw('/storage/buckets/anniversary/files',{method:'POST',body:fd});const url=this.awurl(f.$id);await this.tolerant(d=>this.awj(this.awd('Media'),'POST',{rowId:'unique()',data:d}),{url,name,kind,path:f.$id,giftid:giftId});return}const path=kind+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;await this.req('/storage/v1/object/anniversary/'+path,{method:'POST',headers:{'Content-Type':blob.type||'application/octet-stream'},body:blob});await this.json('media','POST',{kind,name,path})},
  async delMedia(m){if(this.type==='aw'){await this.aw(this.awd('Media')+'/'+m.id,{method:'DELETE'});try{await this.aw('/storage/buckets/anniversary/files/'+m.path,{method:'DELETE'})}catch(e){}return}await this.rest('media?id=eq.'+m.id,{method:'DELETE'});try{await this.req('/storage/v1/object/anniversary/'+m.path,{method:'DELETE'})}catch(e){}},
- async listWishes(){if(this.type==='aw'){const r=await this.aw(this.awd('wishes')+this.awq({method:'equal',attribute:'giftid',values:[giftId]},{method:'orderDesc',attribute:'$createdAt'},{method:'limit',values:[60]}));return r.rows.map(w=>({name:w.name,message:w.message||w.text,created_at:w.$createdAt}))}return this.rest('wishes?select=*&order=created_at.desc&limit=60')},
- async addWish(name,message){if(this.type==='aw')return this.awj(this.awd('wishes'),'POST',{rowId:'unique()',data:{text:message,name:name||'',message,giftid:giftId}});return this.json('wishes','POST',{name:name||null,message},'return=minimal')},
+ async listWishes(){if(this.type==='aw'){const rows=await this.awList('wishes',[{method:'equal',attribute:'giftid',values:[giftId]}],60);return rows.map(w=>({name:w.name,message:w.message||w.text,created_at:w.$createdAt}))}return this.rest('wishes?select=*&order=created_at.desc&limit=60')},
+ async addWish(name,message){if(this.type==='aw')return this.tolerant(d=>this.awj(this.awd('wishes'),'POST',{rowId:'unique()',data:d}),{text:message,name:name||'',message,giftid:giftId});return this.json('wishes','POST',{name:name||null,message},'return=minimal')},
  async getSettings(){if(this.type==='aw'){try{const d=await this.getRow('Settings','main');return JSON.parse(d.data||'{}')}catch(e){return null}}const r=await this.rest('site_settings?id=eq.1&select=data');return r&&r[0]&&r[0].data},
  async saveSettings(o){if(this.type==='aw'){const s=JSON.stringify(o);return this.putRow('Settings','main',{data:s})}await this.json('site_settings','POST',{id:1,data:o,updated_at:new Date().toISOString()},'resolution=merge-duplicates,return=minimal')},
- async makeShort(code,url){if(this.type==='aw'){try{return await this.awj(this.awd('short_links')+'/'+encodeURIComponent(code),'PATCH',{data:{code,url}})}catch(e){return this.awj(this.awd('short_links'),'POST',{rowId:code,data:{code,url}})}}return this.json('short_links','POST',{code,url},'return=minimal')},
+ async makeShort(code,url){if(this.type==='aw')return this.putRow('short_links',code,{code,url});return this.json('short_links','POST',{code,url},'return=minimal')},
  async resolveShort(code){if(this.type==='aw'){const d=await this.getRow('short_links',code);return d&&d.url}const r=await this.rest('short_links?code=eq.'+encodeURIComponent(code)+'&select=url');return r&&r[0]&&r[0].url}
 };
 
@@ -484,7 +492,7 @@ const idb={db:null,open(){return this.db?Promise.resolve(this.db):new Promise((r
  async run(m,f){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('f',m),q=f(t.objectStore('f'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})}};
 async function shrink(file,max=1280,quality=.82){try{const bm=await createImageBitmap(file);const k=Math.min(1,max/Math.max(bm.width,bm.height));const c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',quality))||file}catch(e){return file}}
 const Media={
- async list(kind){if(sb.on){try{return await sb.listMedia(kind)}catch(e){toast('Could not reach your online storage')}return[]}
+ async list(kind){if(sb.on){try{return await sb.listMedia(kind)}catch(e){toast('Online storage: '+why(e))}return[]}
   try{const a=await idb.run('readonly',s=>s.getAll());return a.filter(x=>x.kind===kind).reverse().map(x=>({id:x.id,name:x.name,src:URL.createObjectURL(x.blob),local:1}))}catch(e){return[]}},
  async add(kind,file){const name=file.name.replace(/\.[^.]+$/,'').slice(0,60)||'Memory';const blob=kind==='photo'?await shrink(file):file;
   if(sb.on){const ext=kind==='photo'?'jpg':(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3';await sb.addMedia(kind,name,blob,ext)}
@@ -563,12 +571,12 @@ $('#rand').onclick=e=>{let n;do n=Math.floor(Math.random()*rs.length);while(n===
 
 /* wishes / guestbook */
 R.wishes=async()=>{$('#promises').innerHTML=PROMISES.map(p=>`<li>${esc(p)}</li>`).join('');let list;
- if(sb.on){try{list=await sb.listWishes()}catch(e){list=[];toast('Could not reach your online storage')}}else list=LS.get('wishes',[]);
+ if(sb.on){try{list=await sb.listWishes()}catch(e){list=[];toast('Wishes: '+why(e))}}else list=LS.get('wishes',[]);
  $('#msgs').innerHTML=list.length?list.map(w=>`<li><b>${esc(w.name||'Someone who loves you')}</b><small>${new Date(w.created_at).toLocaleDateString()}</small><p>${esc(w.message)}</p></li>`).join(''):'<li><p class="hint">Wishes and messages will appear here.</p></li>'};
 $('#candle').onclick=()=>$('#candle').classList.toggle('out');
 $('#wForm').onsubmit=async e=>{e.preventDefault();const message=$('#wMsg').value.trim(),name=$('#wName').value.trim();if(!message)return;
  try{if(sb.on)await sb.addWish(name,message);else{const l=LS.get('wishes',[]);l.unshift({name,message,created_at:new Date().toISOString()});LS.set('wishes',l.slice(0,100))}
-  $('#wMsg').value='';$('#candle').classList.add('out');const r=$('#candle').getBoundingClientRect();burst(r.left+r.width/2,r.top+20,22);toast('Wish sent. Blow out the candle.');R.wishes()}catch(er){toast('Could not send. Check your online setup.')}};
+  $('#wMsg').value='';$('#candle').classList.add('out');const r=$('#candle').getBoundingClientRect();burst(r.left+r.width/2,r.top+20,22);toast('Wish sent. Blow out the candle.');R.wishes()}catch(er){toast('Could not send: '+why(er))}};
 
 /* ---------- music: gentle pieces synthesised live, plus uploaded songs ---------- */
 const SYN=[];  /* built-in songs removed: only songs you add on the edit page play */
@@ -613,7 +621,7 @@ async function loadSongs(){const mine=await Media.list('song');const links=(Arra
 R.music=loadSongs;
 
 
-$('#settingsUpSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){toast('Could not save. Check your Appwrite setup.')}};
+$('#settingsUpSong').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving song...');try{for(const f of fs)await Media.add('song',f);await loadSongs();toast('Song added to the playlist')}catch(er){toast('Could not save: '+why(er))}};
 $('#settingsSongLinkForm').onsubmit=async e=>{e.preventDefault();const title=$('#settingsSongLinkTitle').value.trim(),url=$('#settingsSongLinkUrl').value.trim();if(!title||!url)return;try{const u=new URL(url);if(!['http:','https:'].includes(u.protocol))throw new Error('Invalid URL');C.songLinks=Array.isArray(C.songLinks)?C.songLinks:[];C.songLinks.push({id:'sl-'+Date.now().toString(36),title:title.slice(0,80),src:u.href});await persist();await loadSongs();$('#settingsSongLinkTitle').value='';$('#settingsSongLinkUrl').value='';toast('Song link added to this gift')}catch(err){toast('Enter a valid https:// song link')}};
 $('#settingsTracks').onclick=async e=>{const x=e.target.closest('[data-del]');if(x){e.stopPropagation();const s=Snd.list[+x.dataset.del];try{if(s.mid)await Media.del(s.mid);if(s.link){C.songLinks=(C.songLinks||[]).filter(v=>(v.id||'')!==(s.id||s.linkId));await persist()}if(Snd.list[Snd.i]===s){Snd.stop();Snd.playing=false;Snd.i=0}await loadSongs();toast('Song removed')}catch(er){toast('Could not remove song')}return}const b=e.target.closest('button[data-i]');if(!b)return;const i=+b.dataset.i;if(i===Snd.i)Snd.toggle();else{Snd.stop();Snd.i=i;Snd.playing=false;Snd.play()}};
 Snd.list=SYN.slice();sync();
@@ -672,11 +680,21 @@ $('#cpShort').onclick=()=>$('#lnkShort').value?copy($('#lnkShort').value,$('#lnk
 function setShort(s){['#lnkShort','#lnkShort2'].forEach(i=>{const e=$(i);if(e)e.value=s});$('#qrUrl').value=s;QR.draw();const g=$('#guestPrev');if(g){g.href=QR.base()+'?g='+encodeURIComponent(giftId)+'&v=1';g.hidden=false}}
 async function makeShare(){if(!sb.on){toast('Online sharing is not configured for this site yet');return}
  try{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();await persist();const code=giftId,root=QR.base();await sb.makeShort(code,root+'?g='+encodeURIComponent(code));setShort(root+'?s='+encodeURIComponent(code));toast('Saved. Your short link is ready!')}
- catch(e){console.error('Short-link creation failed:',e);toast('Could not save/link this gift. Check Appwrite table permissions and setup.')}}
+ catch(e){console.error('Short-link creation failed:',e);toast('Could not save: '+why(e))}}
 $('#mkShort').onclick=makeShare;$('#mkShort2').onclick=makeShare;
 const shareIt=async inp=>{const url=inp.value.trim();if(!url){toast('Make the short link first');return}try{if(navigator.share)await navigator.share({title:'A little anniversary gift',text:'I made this for you',url});else{await navigator.clipboard.writeText(url);toast('Link copied. Ready to share')}}catch(e){if(e&&e.name!=='AbortError')copy(url,inp)}};
 $('#shareShort').onclick=()=>shareIt($('#lnkShort'));$('#shareShort2').onclick=()=>shareIt($('#lnkShort2'));
 $('#cpShort2').onclick=()=>$('#lnkShort2').value?copy($('#lnkShort2').value,$('#lnkShort2')):toast('Make the short link first');
+
+$('#checkBtn').onclick=async()=>{const out=$('#checkOut'),rows=[];const add=(ok,name,msg)=>rows.push(`<li><b>${ok?'OK':'Problem'}</b><small>${esc(name)}</small><p>${esc(msg||'')}</p></li>`);
+ if(sb.type!=='aw'){out.innerHTML='<li><p>Appwrite is not set in this file.</p></li>';return}
+ out.innerHTML='<li><p class="hint">Checking...</p></li>';const lim=encodeURIComponent(JSON.stringify({method:'limit',values:[1]}));
+ for(const t of Object.keys(T)){try{await sb.aw(sb.awd(t)+'?queries[]='+lim);add(true,t+' table: read')}catch(e){add(false,t+' table: read',why(e))}}
+ try{await sb.aw('/storage/buckets/anniversary/files?queries[]='+lim);add(true,'Storage bucket: read')}catch(e){add(false,'Storage bucket: read',why(e))}
+ for(const [t,d] of [['Anniversary',{id:'selftest',data:'{}'}],['short_links',{code:'selftest',url:'https://example.com'}],['wishes',{text:'check',name:'check',message:'check',giftid:'selftest'}],['Media',{url:'https://example.com',name:'check',kind:'photo',path:'selftest',giftid:'selftest'}]]){
+  try{await sb.aw(sb.awd(t),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rowId:'selftest',data:d})});add(true,t+' table: write');try{await sb.aw(sb.awd(t)+'/selftest',{method:'DELETE'})}catch(e){add(false,t+' table: delete test row','Could not delete the test row (give role Any Delete permission). You can delete the row named selftest by hand.')}}catch(e){add(false,t+' table: write',why(e))}}
+ try{const fd=new FormData();fd.append('fileId','unique()');fd.append('file',new Blob(['x'],{type:'text/plain'}),'check.txt');const f=await sb.aw('/storage/buckets/anniversary/files',{method:'POST',body:fd});add(true,'Storage bucket: upload');try{await sb.aw('/storage/buckets/anniversary/files/'+f.$id,{method:'DELETE'})}catch(e){}}catch(e){add(false,'Storage bucket: upload',why(e))}
+ out.innerHTML=rows.join('')};
 
 /* ---------- settings ---------- */
 const KEYS=['a','b','date','sign','story','timeline','letter','reasons'];
@@ -685,13 +703,13 @@ async function renderEditPhotos(){editPhotos=await Media.list('photo');
  $('#settingsPhotos').innerHTML=editPhotos.length?editPhotos.map((p,i)=>`<figure><img src="${p.src}" alt="${esc(p.name)}" loading="lazy"><button type="button" class="btn ghost" data-rm="${i}">Remove</button></figure>`).join(''):'<p class="hint">No photos yet.</p>';
  $('#bgAlbum').innerHTML=editPhotos.length?editPhotos.map((p,i)=>`<button type="button" class="album-pick" data-pick="${i}" aria-label="Use ${esc(p.name)} as background" aria-pressed="${C.backgroundData===p.src}"><img src="${p.src}" alt="" loading="lazy"></button>`).join(''):'<p class="hint">Add photos above, then tap one here to use it as the background.</p>'}
 $('#settingsUpPhoto').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;toast('Saving '+fs.length+' photo'+(fs.length>1?'s':'')+'...');
- try{for(const f of fs)await Media.add('photo',f);toast('Photos added');renderEditPhotos()}catch(er){toast('Could not save. Check your Appwrite setup.')}};
+ try{for(const f of fs)await Media.add('photo',f);toast('Photos added');renderEditPhotos()}catch(er){toast('Could not save: '+why(er))}};
 $('#settingsPhotos').onclick=async e=>{const b=e.target.closest('[data-rm]');if(!b)return;if(b.dataset.s!=='1'){b.dataset.s='1';b.textContent='Tap again';return}
  try{await Media.del(editPhotos[+b.dataset.rm]);toast('Photo removed');renderEditPhotos()}catch(er){toast('Could not remove the photo')}};
 $('#bgAlbum').onclick=e=>{const b=e.target.closest('[data-pick]');if(!b)return;const p=editPhotos[+b.dataset.pick];if(!p)return;if(p.local){toast('Connect online storage first, or this background will not be saved');return}
  C.backgroundData=p.src;C.backgroundPreset='custom';applyGiftBackground();syncBackgroundPicker();toast('Background set from your album. Tap Save changes.')};
 async function persist(){const o={};KEYS.forEach(k=>o[k]=C[k]);o.backgroundPreset=C.backgroundPreset||'paper';o.backgroundData=C.backgroundData||'';o.songLinks=Array.isArray(C.songLinks)?C.songLinks:[];LS.set('cfg',o);if(sb.on){if(giftId!=='main')await sb.saveGift(giftId,o);else await sb.saveSettings(o)}}
-$('#save').onclick=async()=>{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();let msg='Saved on this device';try{await persist();if(sb.on)msg='Saved online'}catch(e){msg='Saved here, but online save failed'}toast(msg);cur=-1;go(ids.indexOf('settings'))};
+$('#save').onclick=async()=>{KEYS.forEach(k=>C[k]=$('#f_'+k).value||DEF[k]);fillBasics();let msg='Saved on this device';try{await persist();if(sb.on)msg='Saved online'}catch(e){msg='Saved here. Online save failed: '+why(e)}toast(msg);cur=-1;go(ids.indexOf('settings'))};
 $('#reset').onclick=e=>{if(!e.target.dataset.s){e.target.dataset.s=1;e.target.textContent='Tap again to reset';return}C={...DEF};LS.set('cfg',{});e.target.dataset.s='';e.target.textContent='Reset words';fillBasics();R.settings();applyGiftBackground();toast('Words reset')};
 async function loadRemote(){if(!sb.on)return;try{if(giftId!=='main'){const gift=await sb.getGift(giftId);if(gift&&Object.keys(gift).length){C={...DEF,...gift};LS.set('cfg',gift);return}}const d=await sb.getSettings();if(d&&Object.keys(d).length){C={...DEF,...d};LS.set('cfg',d)}}catch(e){}}
 
